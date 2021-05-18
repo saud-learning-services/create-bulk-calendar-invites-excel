@@ -1,6 +1,6 @@
-#Excel VBA for Sending Outlook Appointment Calendar Invites
+# Excel VBA for Sending Outlook Appointment Calendar Invites
 
-##Prepare Your Excel for VBA
+## Prepare Your Excel for VBA
 
 1. Open a blank Excel File
 1. Save as a Macro-Enabled Spreadsheet
