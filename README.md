@@ -1,5 +1,23 @@
 # Excel VBA for Sending Outlook Appointment Calendar Invites
 
+## Purpose
+
+During exam season, immense amounts of time are dedicated to sending out 
+Outlook Calendar appointment invitations. Each participant of the 
+meeting has to be looked up and their E-mail address added individually. 
+Furthermore, while templates are available for the various invites, much 
+of the content has to be customized, including the meeting dates / time, 
+the meeting room (location), the list of instructors & support staff, 
+list of support rooms (for larger exams) etc. 
+
+While innate variations 
+between exams exist, and some customizations are probably always present, 
+much of the content could still be automated to minimize the amount of time 
+spent searching, scrolling and pasting information. This set of VBA code 
+is meant to be imported into a Macro-Enabled Excel file containing exam 
+information, and it is hoped that most of the drafting work for 
+Calendar Invites can be automated by the code included.
+
 ## Prepare Your Excel for VBA
 
 1. Open a blank Excel File
