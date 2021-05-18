@@ -1,5 +1,7 @@
 #Excel VBA for Sending Outlook Appointment Calendar Invites
+
 ##Prepare Your Excel for VBA
+
 1. Open a blank Excel File
 1. Save as a Macro-Enabled Spreadsheet
 1. Go to "File"
@@ -26,7 +28,3 @@
     1. In VBA window, go to "File"
     1. => "Import File"
     1. => choose the file from this repo
-        
-    
-
-
