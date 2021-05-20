@@ -5,10 +5,14 @@ Option Explicit
 Dim WB As Workbook
 Dim ExamSheet As Worksheet
 Dim T1Mails As Worksheet
-Dim T2Mails As Worksheet
 Dim T1Range As Range
 Dim T1FNames As Range
+Dim T2Mails As Worksheet
+Dim T2Range As Range
+Dim T2FNames As Range
 Dim ZoomRooms As Worksheet
+Dim ZRRange As Range
+Dim ZRNum As Range
 Dim EST1ColN As Integer
 Dim EST2ColN As Integer
 Dim ESLColN As Integer
@@ -17,7 +21,6 @@ Dim T1LColN As Integer
 Dim T1LRowN As Integer
 Dim T2LColN As Integer
 Dim T2LRowN As Integer
-
 
 Private Sub InitVars()
     'Initialize Workbook and Sheets
@@ -40,6 +43,15 @@ Private Sub InitVars()
             .Cells(T1LRowN, T1LColN))
         Set T1FNames = T1Mails.Range(.Cells(1, 1), _
             .Cells(T1LRowN, 1))
+    End With
+
+    T2LRowN = T2Mails.Cells(Rows.Count, 1).End(xlUp).Row
+    T2LColN = T2Mails.Cells(1, Columns.Count).End(xlToLeft).Column
+    With T2Mails
+        Set T2Range = T2Mails.Range(.Cells(1, 1), _
+            .Cells(T2LRowN, T2LColN))
+        Set T2FNames = T2Mails.Range(.Cells(1, 1), _
+            .Cells(T2LRowN, 1))
     End With
 End Sub
 
