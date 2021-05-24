@@ -1,125 +1,126 @@
 'Attribute VB_Name = "Send_Invite_Module"
 Option Explicit
 
-'Initialize Global Variables
+'Initialize global variables
 Dim WB As Workbook
 Dim ExamSheet As Worksheet
 Dim T1Mails As Worksheet
-Dim T1Range As Range
-Dim T1FNames As Range
-Dim T2Mails As Worksheet
-Dim T2Range As Range
-Dim T2FNames As Range
-Dim ZoomRooms As Worksheet
-Dim ZRRange As Range
-Dim ZRNum As Range
-Dim EST1ColN As Integer
-Dim EST2ColN As Integer
-Dim ESLColN As Integer
-Dim ESLRowN As Integer
-Dim T1LColN As Integer
-Dim T1LRowN As Integer
-Dim T2LColN As Integer
-Dim T2LRowN As Integer
+Dim T1LR As Integer
+Dim T1LC As Integer
 
+'Initialize / set values for global variables
 Private Sub InitVars()
-    'Initialize Workbook and Sheets
     Set WB = ThisWorkbook
     Set ExamSheet = WB.Sheets("Exam Sheet")
-    Set T1Mails  = WB.Sheets("Tier 1 Email List")
-    Set T2Mails = WB.Sheets("Tier 2 Email List")
-    Set ZoomRooms = WB.Sheets("Zoom Rooms")
-
-    EST1ColN = ExamSheet.Range("A1:AD1").Find _
-        ("TIER 1", LookIn:=xlValues, MatchCase:=False).Column
-
-    ESLRowN = ExamSheet.Cells(Rows.Count, 1).End(xlUp).Row
-    ESLColN = ExamSheet.Cells(1, Columns.Count).End(xlToLeft).Column
-
-    T1LRowN = T1Mails.Cells(Rows.Count, 1).End(xlUp).Row
-    T1LColN = T1Mails.Cells(1, Columns.Count).End(xlToLeft).Column
-    With T1Mails
-        Set T1Range = T1Mails.Range(.Cells(1, 1), _
-            .Cells(T1LRowN, T1LColN))
-        Set T1FNames = T1Mails.Range(.Cells(1, 1), _
-            .Cells(T1LRowN, 1))
-    End With
-
-    T2LRowN = T2Mails.Cells(Rows.Count, 1).End(xlUp).Row
-    T2LColN = T2Mails.Cells(1, Columns.Count).End(xlToLeft).Column
-    With T2Mails
-        Set T2Range = T2Mails.Range(.Cells(1, 1), _
-            .Cells(T2LRowN, T2LColN))
-        Set T2FNames = T2Mails.Range(.Cells(1, 1), _
-            .Cells(T2LRowN, 1))
-    End With
+    Set T1Mails  = WB.Sheets("Tier 1 Mails")
+    
+    Call MakeRefRange(T1Mails, T1LR, T1LC)
 End Sub
 
-'This Sub sends one invite, for the row where the active cell is
-'OR to be used as part of loop
-Public Sub SendInvite(Optional CurrRow As Integer = 0)
-    Call InitVars
+'Finds last row and column if applicable
+'Can produce a specific reference range also
+Private Sub MakeRefRange( _
+    RefSheet As Worksheet, _
+    NumRow As Integer, _
+    NumCol As Integer, _
+    Optional RefRange As Range, _
+    Optional AnchorRow As Integer = 1, _
+    Optional AnchorCol As Integer = 1)
+
+    Call FindLastRC(NumRow, NumCol, RefSheet)
     
-    'If CurrRow has default val: means sending current row, assign current row
-    If (CurrRow = 0) Then
-        CurrRow = ActiveCell.Row
+    If Not(RefRange Is Nothing) Then
+        With RefSheet
+            Set RefRange = .Range(.Cells(AnchorRow, AnchorCol), _
+                .Cells(NumRow, NumCol))
+        End With
+    End If
+End Sub
+
+'Finds last row and column in a range
+'Will not find row / column if number already exists (non-zero)
+Private Sub FindLastRC( _
+    LastRow As Integer, _
+    LastCol As Integer, _
+    FindInSheet As Worksheet)
+
+    If Not(LastRow > 0) Then
+        LastRow = FindInSheet.Cells(Rows.Count, 1).End(xlUp).Row
     End If
 
-    'Declare and build appointment
-    Dim Otlook As Outlook.Application
-    Set Otlook = New Outlook.Application
-    Dim OtAppoint As Outlook.AppointmentItem
-    Set OtAppoint = Otlook.CreateItem(olAppointmentItem)
-    OtAppoint.MeetingStatus = olMeeting
-
-    'Pull From ExamSheet CurrRow Cell with T1
-    Dim T1Source As String
-    T1Source = ExamSheet.Cells(CurrRow, EST1ColN).Value
-    
-    'Array with each T1 Role, Person
-    Dim T1List As Variant
-    T1List = Split(T1Source, ";")
-
-    'Iterate over each T1 Role, Person
-    Dim T1Per As Variant
-    For Each T1Per In T1List
-        Dim T1RoleName As Variant 'Array of a single role, person
-        Dim T1PerName As String 'String of a single name
-        Dim T1PerMail As String 'Mail to pull from T1Mails
-
-        T1Per = Replace(T1Per, " ","")
-        T1RoleName = Split(T1Per, ",")
-        T1PerName = T1RoleName(1)
-        
-        'Find Email of current person
-        With Application.WorksheetFunction
-            T1PerMail = .Index(T1Range, _
-                .Match(T1PerName, T1FNames, 0), T1LColN)
-            Debug.Print T1PerMail
-        End With
-        OtAppoint.Recipients.Add(T1PerMail) 'Add recipient to Invite
-        'To add emails to invite
-    Next T1Per
-
-    'Next
-        'Automate Time
-        'Automate Invite meeting link
-        'More sophisticated Body
-            'Course Name
-            'Instructor
-            'Time
-            'Zoom room
-            'Support Staff List
-    With OtAppoint
-        .Subject = "IGNORE - Testing Only"
-        .Body = "Please ignore, this is for testing only :]"
-        .Start = #5/19/2021 5:00:00 AM#
-        .Duration = 1
-        .Save
-        '.Send 'This will send the invite right-away
-    End With
+    If Not(LastCol > 0) Then
+        LastCol = FindInSheet.Cells(1, Columns.Count).End(xlToLeft).Column
+    End If
 End Sub
 
-Public Sub CallSubs()
-    Call SendInvite
+'This adds recipients by email to the exam meeting
+Private Sub FetchMails( _
+    MailSheet As Worksheet, _
+    LastRow As Integer, _
+    SourceRow As Integer, _
+    SourceCol As Integer, _
+    Optional FNameCol As Integer = 1, _
+    Optional LNameCol As Integer = 2, _
+    Optional MailCol As Integer = 3, _
+    Optional PrefNameCol As Integer = 4)
+
+    Dim SourceVal As String
+    SourceVal = ExamSheet.Cells(SourceRow, SourceCol).Value
+
+    Dim ScanRow As Integer
+    For ScanRow = 2 To LastRow Step 1
+        Dim FNameStr As String
+        Dim LNameStr As String
+        Dim FInitStr As String
+        Dim LInitStr As String
+        Dim HasPrefName As Boolean
+
+        'Extract names from ScanRow in MailRange
+        With MailSheet
+            FNameStr = .Cells(ScanRow, FNameCol)
+            LNameStr = .Cells(ScanRow, LNameCol)
+            FInitStr = Left(FNameStr, 1)
+            LInitStr = Left(LNameStr, 1)
+            HasPrefName = (.Cells(ScanRow, PrefNameCol) <> "")
+
+            If HasPrefName Then
+                Dim PrefNameStr As String
+                Dim PrefInitStr As String
+                PrefNameStr = .Cells(ScanRow, PrefNameCol)
+                PrefInitStr = Left(PrefNameStr, 1)
+            End If
+        End With
+
+        'Regular expression objects for searching names
+        Dim RegexFirstLInit As Object
+        Dim RegexFInitLast As Object
+        Set RegexFirstLInit = CreateObject("VBScript.RegExp")
+        Set RegexFInitLast = CreateObject("VBScript.RegExp")
+        
+        'Define patterns used in regular expressions for search
+        'One regex for "Firstname L" and one for "F<letters> Lastname"
+        If HasPrefName Then
+            RegexFirstLInit.Pattern = PrefNameStr & "\s+?" & LInitStr
+            RegexFInitLast.Pattern = PrefInitStr & "\w+?\s+?" & LNameStr
+        Else
+            RegexFirstLInit.Pattern = FNameStr & "\s+?" & LInitStr
+            RegexFInitLast.Pattern = FInitStr & "\w+?\s+?" & LNameStr
+        End If
+        
+        If RegexFirstLInit.Test(SourceVal) _
+            Or RegexFInitLast.Test(SourceVal) Then
+
+            Debug.Print MailSheet.Cells(ScanRow, MailCol)
+        ElseIf HasPrefName Then
+            'If has preferred name but can't find by preferred name, try official name
+            RegexFirstLInit.Pattern = FNameStr & "\s+?" & LInitStr
+            RegexFInitLast.Pattern = FInitStr & "\w+?\s+?" & LNameStr
+
+            If RegexFirstLInit.Test(SourceVal) _
+                Or RegexFInitLast.Test(SourceVal) Then
+
+                Debug.Print MailSheet.Cells(ScanRow, MailCol)
+            End If
+        End If
+    Next ScanRow
 End Sub
