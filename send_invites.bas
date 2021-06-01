@@ -15,6 +15,8 @@ Dim ExProfCol As Integer
 Dim ExDateCol As Integer
 Dim ExTimeCol As Integer
 Dim ExFormCol As Integer
+Dim ExDurCol As Integer
+Dim ExNumStudCol As Integer
 Dim ExCalCol As Integer
 Dim ExT1Col As Integer
 Dim ExT2Col As Integer
@@ -33,6 +35,8 @@ Dim ExPreMeetKey As String
 Dim ExT2MeetKey As String
 Dim ExEndKey As String
 Dim ExFormKey As String
+Dim ExDurKey As String
+Dim ExNumStudKey As String
 Dim ExCalKey As String
 Dim ExT1Key As String
 Dim ExT2Key As String
@@ -48,6 +52,8 @@ Dim ErrorMsg As String
 Dim ErrorNumMod As Long
 
 'Initialize / set values for global variables
+'Tune default settings to make computation faster (less updating etc)
+'Unmerge cells in select columns
 Private Sub InitMod()
     Application.Calculation = xlCalculationManual
     Application.ScreenUpdating = False
@@ -72,6 +78,8 @@ Private Sub InitMod()
     ExT2MeetKey = "TIER 2 MEET"
     ExEndKey = "END TIME"
     ExFormKey = "FORMAT"
+    ExDurKey = "DURATION"
+    ExNumStudKey = "# STUDENTS"
     ExCalKey = "CALENDAR INVITE"
     ExT1Key = "TIER 1"
     ExT2Key = "TIER 2"
@@ -85,6 +93,8 @@ Private Sub InitMod()
     Call FindCol(ExamSheet, ExDateKey, ExDateCol, ExLastCol)
     Call FindCol(ExamSheet, ExTimeKey, ExTimeCol, ExLastCol)
     Call FindCol(ExamSheet, ExFormKey, ExFormCol, ExLastCol)
+    Call FindCol(ExamSheet, ExDurKey, ExDurCol, ExLastCol)
+    Call FindCol(ExamSheet, ExNumStudKey, ExNumStudCol, ExLastCol)
     Call FindCol(ExamSheet, ExCalKey, ExCalCol, ExLastCol)
     Call FindCol(ExamSheet, ExT1Key, ExT1Col, ExLastCol)
     Call FindCol(ExamSheet, ExT2Key, ExT2Col, ExLastCol)
@@ -98,14 +108,18 @@ Private Sub InitMod()
         ExDateCol, _
         ExTimeCol, _
         ExFormCol, _
+        ExDurCol, _
+        ExNumStudCol, _
         ExRoomCol _
         )
 
     Call UnmergeCol(ExamSheet, ExDateCol, ExLastRow)
     Call UnmergeCol(ExamSheet, ExFormCol, ExLastRow)
+    Call UnmergeCol(ExamSheet, ExDurCol, ExLastRow)
     Call UnmergeCol(ExamSheet, ExRoomCol, ExLastRow)
 End Sub
 
+'To conclude process, restore default spreadsheet settings, remerge cells
 Private Sub EndMod()
     Application.Calculation = xlCalculationAutomatic
     Application.ScreenUpdating = True
@@ -113,9 +127,11 @@ Private Sub EndMod()
 
     Call RemergeCol(ExamSheet, ExDateCol, ExLastRow)
     Call RemergeCol(ExamSheet, ExFormCol, ExLastRow)
+    Call RemergeCol(ExamSheet, ExDurCol, ExLastRow)
     Call RemergeCol(ExamSheet, ExRoomCol, ExLastRow)
 End Sub
 
+'Goes through cells in a column, unmerge cells; empty cells gets above cell value
 Private Sub UnmergeCol( _
     RefSheet As Worksheet, _
     NumCol As Integer, _
@@ -133,6 +149,7 @@ Private Sub UnmergeCol( _
     Next Row
 End Sub
 
+'Goes through cells in a column, merge cells with identical values
 Private Sub RemergeCol( _
     RefSheet As Worksheet, _
     NumCol As Integer, _
@@ -294,42 +311,27 @@ Private Sub FetchMails( _
     Next ScanRow
 End Sub
 
-Private Sub InviteCourseAtts()
-
-End Sub
-
-Public Sub DraftIndivInvite( _
-    Optional InviteRow As Integer = 0, _
-    Optional StepRows As Integer, _
+'Create dicionary of dictionaries, key is course name
+'Each course dictionary is further keyed by course attributes (eg. "SECTIONS")
+Private Sub InviteAtts( _
+    StepThruCourses As Integer, _
+    Courses As Object, _
+    ExamSheet As Worksheet, _
+    InviteRow As Integer, _
+    ExSpecials As Variant, _
+    ExTimeCol As Integer, _
+    ExDateCol As Integer, _
+    ExDateKey As String, _
+    ExT2MeetKey As String, _
+    ExPreMeetKey As String, _
+    ExTimeKey As String, _
+    ExEndKey As String, _
     Optional PreMeetingMins As Integer = 30, _
-    Optional T2MeetingMins As Integer = 15, _
-    Optional OnlyOneInvite As Boolean = True, _
-    Optional testRunning As Boolean = True)
+    Optional T2MeetingMins As Integer = 15)
 
-    StepRows = 1
-    If InviteRow = 0 Then
-        InviteRow = ActiveCell.Row
-    End If
-
-    If OnlyOneInvite Then
-        Call InitMod
-    End If
-
-    'Check if the T1 cell is merged, check for length and assign accordingly to nextrow
-    With ExamSheet
-        If .Cells(InviteRow, ExT1Col).MergeCells Then
-            StepRows = .Cells(InviteRow, ExT1Col).MergeArea.Count
-        End If
-    End With
-
-    'Create dicionary of dictionaries, key is course name
-    'Each course dictionary is further keyed by course attributes (eg. "SECTIONS")
-    Dim Courses As Object
-    Dim CourseInfo As Object
     Dim CourseInInvite As Integer
+    Dim CourseInfo As Object
 
-    Set Courses = CreateObject("Scripting.Dictionary")
-    
     Dim RegexTimes As Object
     Set RegexTimes = CreateObject("VBScript.RegExp")
     RegexTimes.Pattern = "\d\d:\d\d"
@@ -341,9 +343,10 @@ Public Sub DraftIndivInvite( _
     Dim TimeExam As String
     Dim TimeEnd As String
 
-    For CourseInInvite = 1 To StepRows Step 1
+    For CourseInInvite = 1 To StepThruCourses Step 1
         Set CourseInfo = CreateObject("Scripting.Dictionary")
         Dim CourseAtt As Integer
+
         With ExamSheet
             For CourseAtt = LBound(ExSpecials) To UBound(ExSpecials) Step 1
                 If ExSpecials(CourseAtt) <> ExTimeCol _
@@ -392,6 +395,48 @@ Public Sub DraftIndivInvite( _
                 Item:= CourseInfo
         End With
     Next CourseInInvite
+End Sub
+
+'Drafts invite for one set of course(s) that share a meeting time & room
+Public Sub DraftIndivInvite( _
+    Optional InviteRow As Integer = 0, _
+    Optional StepThruCourses As Integer, _
+    Optional OnlyOneInvite As Boolean = True, _
+    Optional testRunning As Boolean = True)
+
+    StepThruCourses = 1
+    If InviteRow = 0 Then
+        InviteRow = ActiveCell.Row
+    End If
+
+    If OnlyOneInvite Then
+        Call InitMod
+    End If
+
+    'Check if the T1 cell is merged, check for length and assign accordingly to nextrow
+    With ExamSheet
+        If .Cells(InviteRow, ExT1Col).MergeCells Then
+            StepThruCourses = .Cells(InviteRow, ExT1Col).MergeArea.Count
+        End If
+    End With
+
+    Dim Courses As Object
+    Set Courses = CreateObject("Scripting.Dictionary")
+    
+    Call InviteAtts( _
+        StepThruCourses, _
+        Courses, _
+        ExamSheet, _
+        InviteRow, _
+        ExSpecials, _
+        ExTimeCol, _
+        ExDateCol, _
+        ExDateKey, _
+        ExT2MeetKey, _
+        ExPreMeetKey, _
+        ExTimeKey, _
+        ExEndKey _
+        )
 
     If testRunning Then
         Dim cours As Variant
