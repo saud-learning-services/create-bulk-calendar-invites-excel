@@ -22,7 +22,8 @@ Dim ExT1Col As Integer
 Dim ExT2Col As Integer
 Dim ExRoomCol As Integer
 Dim ExTeamTextCol As Integer
-Dim ExMaxCourseCol As Integer
+Dim ExAutoDraftCol As Integer
+Dim ExAutoUpdateCol As Integer
 
 Dim ExSpecials As Variant
 
@@ -42,6 +43,8 @@ Dim ExT1Key As String
 Dim ExT2Key As String
 Dim ExRoomKey As String
 Dim ExTeamTextKey As String
+Dim ExAutoDraftKey As String
+Dim ExAutoUpdateKey As String
 
 Dim InvNameKey As String
 Dim InvRoleKey As String
@@ -90,6 +93,8 @@ Private Sub InitMod()
     ExT2Key = "TIER 2"
     ExRoomKey = "SUPPORT ROOM"
     ExTeamTextKey = "TEAMS MESSAGE TEMPLATE"
+    ExAutoDraftKey = "AUTO DRAFT"
+    ExAutoUpdateKey = "AUTO UPDATE"
     InvNameKey = "FULL NAME"
     InvRoleKey = "ROLE"
 
@@ -107,6 +112,8 @@ Private Sub InitMod()
     Call FindCol(ExamSheet, ExT2Key, ExT2Col, ExLastCol)
     Call FindCol(ExamSheet, ExRoomKey, ExRoomCol, ExLastCol)
     Call FindCol(ExamSheet, ExTeamTextKey, ExTeamTextCol, ExLastCol)
+    Call FindCol(ExamSheet, ExAutoUpdateKey, ExAutoUpdateCol, ExLastCol)
+    Call FindCol(ExamSheet, ExAutoDraftKey, ExAutoDraftCol, ExLastCol)
 
     ExSpecials = Array( _
         ExCourseCol, _
@@ -140,6 +147,141 @@ Private Sub EndMod()
     Call RemergeCol(ExamSheet, ExFormCol, ExLastRow)
     Call RemergeCol(ExamSheet, ExDurCol, ExLastRow)
     Call RemergeCol(ExamSheet, ExRoomCol, ExLastRow)
+End Sub
+
+Public Sub WriteMultipleInvites()
+    Call InitMod
+    
+    Dim Sender As String
+    Dim SendImmediate As Boolean
+    Dim IsDebugging As Boolean
+    Dim FirstExRow As Integer
+    Dim LastExRow As Integer
+
+    Call Askers(Sender, SendImmediate, IsDebugging, FirstExRow, LastExRow, ExamSheet, ExCourseCol)
+
+    Dim InviteRow As Integer
+    InviteRow = FirstExRow
+    Dim StepThruCourses As Integer
+
+    Do While InviteRow <= LastExRow
+        Call WriteSingleInvite(Sender, _
+            InviteRow, _
+            StepThruCourses, _
+            IsDebugging, _
+            OnlyOneInvite:=False)
+        InviteRow = InviteRow + StepThruCourses
+    Loop
+
+    Call EndMod
+End Sub
+
+'Confirms settings with macro user
+Private Sub Askers( _
+    Sender As String, _
+    SendImmediate As Boolean, _
+    IsDebugging As Boolean, _
+    FirstExRow As Integer, _
+    LastExRow As Integer, _
+    ExamSheet As Worksheet, _
+    ExCourseCol As Integer)
+
+    Dim InputStr As String
+    Dim RunSelected As Boolean
+
+    Dim Confirmed As Boolean
+    Confirmed = False
+    Do While Confirmed = False
+        Sender = InputBox("Please enter your name (for record keeping):", "Enter Name")
+
+        InputStr = ""
+        Do While InputStr <> "yes" And InputStr <> "no"
+            InputStr = InputBox( _
+                "Are you sending / drafting actual invites?" & _
+                vbNewLine & vbNewLine & "Enter:" & vbNewline & _
+                "'yes' - sending / drafting invites for actual exams" & vbNewLine & _
+                "'no' - testing / debugging only" & vbNewline & vbNewline & _
+                "(Enter answer without quotes)", "Check debugging")
+        Loop
+        If InputStr = "yes" Then
+            IsDebugging = False
+        Else
+            IsDebugging = True
+        End If
+
+        InputStr = "0"
+        Do While InputStr <> "send" And InputStr <> "save"
+            InputStr = InputBox("Send invites immediately or save as draft?" & _
+                vbNewLine & vbNewLine & "Enter:" & vbNewline & _
+                "'send' - send invites immediately" & vbNewLine & _
+                "'save' - save invite drafts to send later" & vbNewline & vbNewline & _
+                "(Enter answer without quotes)", "Send or Save")
+        Loop
+        If InputStr = "send" Then
+            SendImmediate = True
+        Else
+            SendImmediate = False
+        End If
+
+        InputStr = ""
+        Do While InputStr <> "selected" And InputStr <> "assign"
+            InputStr = InputBox("Send invites for exam(s) in selected range or" & _
+                " assign range manually?" & _
+                vbNewLine & vbNewLine & "Enter:" & vbNewline & _
+                "'selected' - send / draft invites for exams in selected range" & vbNewLine & _
+                "'assign' - assign which rows to send / draft invites" & vbNewline & vbNewline & _
+                "(Enter answer without quotes)", "Selected range or assign new")
+        Loop
+        If InputStr = "selected" Then
+            RunSelected = True
+        Else
+            RunSelected = False
+        End If
+
+        If RunSelected Then
+            FirstExRow = Application.Selection.Row
+            LastExRow = FirstExRow + Application.Selection.Rows.Count - 1
+        Else
+            InputStr = "0"
+            Do Until IsNumeric(InputStr) And CInt(InputStr) > 1
+                InputStr = InputBox( _
+                    "Enter row number of the FIRST EXAM to send / draft invite." & _
+                    vbNewline & vbNewline & "Please enter FIRST EXAM's row as an integer:", _
+                    "First Exam Row Number")
+            Loop
+            FirstExRow = CInt(InputStr)
+
+            InputStr = "0"
+            Do Until IsNumeric(InputStr) And CInt(InputStr) >= FirstExRow
+                InputStr = InputBox( _
+                    "Enter row number of the LAST EXAM to send / draft invite." & _
+                    vbNewline & vbNewline & "Please enter LAST EXAM's row as an integer:", _
+                    "Last Exam Row Number")
+            Loop
+            LastExRow = CInt(InputStr)
+        End If
+
+        InputStr = InputBox( _
+            "Proceed with following settings?" & vbNewline & vbNewline & _
+            "Sender Name: " & Sender & vbNewline & _
+            "Send invites immediately: " & SendImmediate & vbNewline & _
+            "Debugging: " & IsDebugging & vbNewline & _
+            "First course to send / draft invite: " & _
+                ExamSheet.Cells(FirstExRow, ExCourseCol).Value & vbNewline & _
+            "Last course to send / draft invite: " & _
+                ExamSheet.Cells(LastExRow, ExCourseCol).Value & vbNewline & _
+            vbNewline & "Enter:" & vbNewline & _
+            "'yes'  - to proceed with above settings" & vbNewline & _
+            "'no' - to stop macro" & vbNewline & _
+            "(anything else) - to start over", _
+            "Input Confirmation")
+
+        If InputStr = "yes" Then
+            Confirmed = True
+        ElseIf InputStr = "no" Then
+            End
+        End If
+    Loop
 End Sub
 
 'Goes through cells in a column, unmerge cells; empty cells gets above cell value
@@ -550,11 +692,12 @@ Private Sub InviteAtts( _
 End Sub
 
 'Drafts invite for one set of course(s) that share a meeting time & room
-Public Sub WriteSelectedInvite( _
+Public Sub WriteSingleInvite( _
+    Optional Sender As String = "Sauder LS", _
     Optional InviteRow As Integer = 0, _
     Optional StepThruCourses As Integer, _
-    Optional OnlyOneInvite As Boolean = True, _
-    Optional testRunning As Boolean = True)
+    Optional IsDebugging As Boolean = True, _
+    Optional OnlyOneInvite As Boolean = True)
 
     StepThruCourses = 1
     If InviteRow = 0 Then
@@ -572,11 +715,32 @@ Public Sub WriteSelectedInvite( _
         End If
     End With
 
+    Dim IsUpdating As Boolean
+    Dim HaveSentInv As Boolean
+    Dim NoUpdate As Boolean
+    Dim NoDraft As Boolean
+
+    Call CheckIfUpdating( _
+        HaveSentInv, _
+        NoDraft, _
+        NoUpdate, _
+        ExamSheet, _
+        ExCalCol, _
+        ExAutoUpdateCol, _
+        InviteRow)
+
+    If NoDraft Then
+        Exit Sub
+    ElseIf NoUpdate And HaveSentInv Then
+        Exit Sub
+    ElseIf Not(NoUpdate) And HaveSentInv Then
+        IsUpdating = True
+    Else
+        IsUpdating = False
+    End If
+
     Dim IsOnCall As Boolean
     Call CheckOnCall(IsOnCall, ExamSheet, ExT2Col, InviteRow)
-
-    Dim IsUpdating As Boolean
-    IsUpdating = IsEmpty(ExamSheet.Cells(InviteRow, ExCalCol))
 
     Dim Courses As Object
     Set Courses = CreateObject("Scripting.Dictionary")
@@ -599,34 +763,42 @@ Public Sub WriteSelectedInvite( _
     FirstCourse = Courses.Keys()(0)
     Dim InvSubject As String
     InvSubject = ""
+    Dim SubPrefix As String
+    If IsDebugging Then
+        SubPrefix = "IGNORE TESTING ONLY - "
+    Else
+        SubPrefix = ""
+    End If
+    Dim InvPreMeetTime As String
     Dim MaxEndTime As String
     MaxEndTime = "00:01"
 
+    InvPreMeetTime = FormatDateTime( _
+        Courses(FirstCourse).Item(ExPreMeetKey), _
+        vbShortTime)
+
+    Dim InvSendTimeStamp As String
+    InvSendTimeStamp = FormatDateTime(Now, vbShortDate)
+
     Dim cours As Variant
-    Dim attDeCours As Variant
     For Each cours In Courses.Keys
-        If testRunning Then
-            Debug.Print cours
+        If FormatDateTime(Courses(cours).Item(ExEndKey), vbShortTime) _
+            > MaxEndTime Then
+
+            MaxEndTime = _
+                FormatDateTime(Courses(cours).Item(ExEndKey), vbShortTime)
         End If
         InvSubject = InvSubject & cours & " "
-        For Each attDeCours In Courses(cours)
-            If testRunning Then
-                Debug.Print "    ", attDeCours, Courses(cours).Item(attDeCours)
-            End If
-            If attDeCours = ExEndKey Then
-                If _
-                    FormatDateTime(Courses(cours).Item(attDeCours), vbShortTime) _
-                    > MaxEndTime Then
-                    MaxEndTime = _
-                        FormatDateTime(Courses(cours).Item(attDeCours), vbShortTime) 
-                End If
-            End If
-        Next attDeCours
-        If testRunning Then
+        If IsDebugging Then
+            Dim coursAtt As Variant
+            Debug.Print cours
+            For Each coursAtt In Courses(cours)
+                Debug.Print "    ", coursAtt, Courses(cours).Item(coursAtt)
+            Next coursAtt
             Debug.Print "------"
         End If
     Next cours
-    InvSubject = InvSubject & "EXAM(S) - " & Courses(FirstCourse).Item(ExPreMeetKey)
+    InvSubject = InvSubject & "EXAM(S) - " & InvPreMeetTime
 
     'Build an Outlook Invite
     Dim Ot As Outlook.Application
@@ -636,13 +808,57 @@ Public Sub WriteSelectedInvite( _
     Dim OtAppointMain As Outlook.AppointmentItem
 
     If IsUpdating Then
-'        Dim OtFolder As Outlook.MAPIFolder
-'        Dim OtObj As Object
-'        Set OtNamespace = Ot.GetNameSpace("MAPI")
-'        Set OtFolder = OtNameSpace.GetDefaultFolder(olFolderCalendar)
+        Dim OtFolder As Outlook.MAPIFolder
+        Dim OtObj As Object
+        Set OtNamespace = Ot.GetNameSpace("MAPI")
+        Set OtFolder = OtNameSpace.GetDefaultFolder(olFolderCalendar)
 
-        'Loop through mails looking for previous invite
-        Debug.Print "lol this is not implemented yet xdxd"
+        Dim OtAppSubject As String
+        Dim OtAppDate As String
+        Dim OtAppTime As String
+
+        For Each OtObj in OtFolder.Items
+            OtAppSubject = OtObj.Subject
+            OtAppDate = FormatDateTime(OtObj.Start, vbShortDate)
+            OtAppTime = FormatDateTime(OtObj.Start, vbShortTime)
+
+            Dim datesBack As Integer
+            If IsDebugging Then
+                datesBack = 548
+            Else
+                datesBack = 0
+            End If
+
+            Dim TotRecip As Integer
+            Dim recip As Integer
+
+            If DateDiff("d", InvSendTimeStamp, OtAppDate) >= -1*datesBack And _
+                DateDiff("d", InvSendTimeStamp, OtAppDate) <= 90 Then
+                    If DateDiff("n",OtAppDate & " " & OtAppTime,InvPreMeetTime)<=60 Then
+                        If OtAppSubject = SubPrefix & "Tier 2 Block - " & InvSubject Then
+                            Set OtAppointT2 = OtObj
+                            With OtAppointT2
+                                TotRecip = .Recipients.Count - 1
+                                For recip = 1 to TotRecip
+                                    .Recipients.Remove(2)
+                                Next recip
+                                .Body = ""
+                            End With
+                        ElseIf Not(IsOnCall) _
+                            And OtAppSubject = _
+                            SubPrefix & "Pre-exam Meeting - " & InvSubject Then
+                            Set OtAppointMain = OtObj
+                            With OtAppointMain
+                                TotRecip = .Recipients.Count - 1
+                                For recip = 1 to TotRecip
+                                    .Recipients.Remove(2)
+                                Next recip
+                                .Body = ""
+                            End With
+                        End If
+                    End If
+            End If
+        Next OtObj
     Else
         If Not IsOnCall Then
             Set OtAppointMain = Ot.CreateItem(olAppointmentItem)
@@ -705,6 +921,7 @@ Public Sub WriteSelectedInvite( _
             ExTimeKey, _
             ExEndKey, _
             ExFormKey, _
+            ExDurKey, _
             InvRoleKey, _
             InvNameKey, _
             IsOnCall, _
@@ -722,6 +939,7 @@ Public Sub WriteSelectedInvite( _
             ExTimeKey, _
             ExEndKey, _
             ExFormKey, _
+            ExDurKey, _
             InvRoleKey, _
             InvNameKey, _
             IsOnCall, _
@@ -740,6 +958,7 @@ Public Sub WriteSelectedInvite( _
             ExTimeKey, _
             ExEndKey, _
             ExFormKey, _
+            ExDurKey, _
             InvRoleKey, _
             InvNameKey, _
             IsOnCall, _
@@ -756,8 +975,10 @@ Public Sub WriteSelectedInvite( _
         .HTMLBody = T2InvHTML
         .GetInspector().WordEditor.Range.FormattedText.Copy
     End With
-
     OtAppointT2.GetInspector().WordEditor.Range.FormattedText.Paste
+
+    Dim InvStatus As String
+    InvStatus = ExamSheet.Cells(InviteRow, ExCalCol).Value
 
     Dim PersonMail
 
@@ -770,11 +991,7 @@ Public Sub WriteSelectedInvite( _
 
         With OtAppointMain
             .GetInspector().WordEditor.Range.FormattedText.Paste
-            If testRunning Then
-                .Subject = "IGNORE TESTING ONLY - Pre-exam Meeting - " & InvSubject
-            Else
-                .Subject = "Pre-exam Meeting - " & InvSubject
-            End If
+            .Subject = SubPrefix & "Pre-exam Meeting - " & InvSubject
             .Start = _
                 FormatDateTime(Courses(FirstCourse).Item(ExDateKey), vbShortDate) & " " & _
                 FormatDateTime(Courses(FirstCourse).Item(ExPreMeetKey), vbShortTime)
@@ -795,14 +1012,11 @@ Public Sub WriteSelectedInvite( _
             .Save
             .Close(olSave)
         End With
+        InvStatus = InvStatus & " T1, "
     End If
 
     With OtAppointT2
-        If testRunning Then
-            .Subject = "IGNORE TESTING ONLY - Tier 2 Block - " & InvSubject
-        Else
-            .Subject = "Tier 2 Block - " & InvSubject
-        End If
+        .Subject = SubPrefix & "Tier 2 Block - " & InvSubject
         .Start = _
             FormatDateTime(Courses(FirstCourse).Item(ExDateKey), vbShortDate) & " " & _
             FormatDateTime(Courses(FirstCourse).Item(ExPreMeetKey), vbShortTime)
@@ -821,6 +1035,12 @@ Public Sub WriteSelectedInvite( _
         .Save
         .Close(olSave)
     End With
+    If IsUpdating Then
+        InvStatus = InvStatus & "T2 updated sent, " & InvSendTimeStamp & "; "
+    Else
+        InvStatus = InvStatus & "T2 sent by" & Sender & " " & InvSendTimeStamp & "; "
+    End If
+    ExamSheet.Cells(InviteRow, ExCalCol).Value = InvStatus
 
 
     If OnlyOneInvite Then
@@ -839,6 +1059,7 @@ Private Sub WriteHTMLInvBody ( _
     ExTimeKey As String, _
     ExEndKey As String, _
     ExFormKey As String, _
+    ExDurKey As String, _
     InvRoleKey As String, _
     InvNameKey As String, _
     IsOnCall As Boolean, _
@@ -846,7 +1067,7 @@ Private Sub WriteHTMLInvBody ( _
     T2Invitees As Object, _
     Optional T1Invitees As Object, _
     Optional IsT2 As Boolean = False, _
-    Optional testRunning As Boolean = True)
+    Optional IsDebugging As Boolean = True)
 
     Dim T2Lead As String
     Dim Person
@@ -904,7 +1125,9 @@ Private Sub WriteHTMLInvBody ( _
             " (" & Courses(cours).Item(ExSecKey) & " Section(s))</b></p>" & _
             "<p>Time: <b>" & Courses(cours).Item(ExTimeKey) & _
             " ~ " & Courses(cours).Item(ExEndKey) & "</b></p>" & _
+            "<p>Duration: <b>" & Courses(cours).Item(ExDurKey) & "</b></p>" & _
             "<p>Format: <b>" & Courses(cours).Item(ExFormKey) & "</b></p>" & _
+            "<p>Room: <b>" & Courses(cours).Item(ExRoomKey) & "</b></p>" & _
             "<p>Number of Students: <b>" & Courses(cours).Item(ExNumStudKey) & _
             "</b></p> <p>&nbsp;</p>"
     Next cours
@@ -947,13 +1170,12 @@ Private Sub WriteHTMLInvBody ( _
 
     InvHTML = InvHTML & "<p><u>"
 
-
-    If testRunning Then
+    If IsDebugging Then
         Debug.Print InvHTML
     End If
 End Sub
 
-Sub CheckOnCall(IsOnCall As Boolean, _
+Private Sub CheckOnCall(IsOnCall As Boolean, _
     ExamSheet As Worksheet, _
     ExT2Col As Integer, _
     InviteRow As Integer)
@@ -964,4 +1186,26 @@ Sub CheckOnCall(IsOnCall As Boolean, _
     RegexOnCall.IgnoreCase = True
 
     IsOnCall = RegexOnCall.Test(ExamSheet.Cells(InviteRow, ExT2Col).Value)
+End Sub
+
+Private Sub CheckIfUpdating(HaveSentInv As Boolean, _
+    NoDraft As Boolean, _
+    NoUpdate As Boolean, _
+    ExamSheet As Worksheet, _
+    ExCalCol As Integer, _
+    ExAutoUpdateCol As Integer, _
+    InviteRow As Integer)
+
+    Dim RegexHaveSent As Object
+    Set RegexHaveSent = CreateObject("VBScript.RegExp")
+    RegexHaveSent.Pattern = "sent"
+    RegexHaveSent.IgnoreCase = True
+    HaveSentInv = RegexHaveSent.Test(ExamSheet.Cells(InviteRow, ExCalCol))
+
+    Dim RegexNoUpdate As Object
+    Set RegexNoUpdate = CreateObject("VBScript.RegExp")
+    RegexNoUpdate.Pattern = "no*"
+    RegexNoUpdate.IgnoreCase = True
+    NoUpdate = RegexNoUpdate.Test(ExamSheet.Cells(InviteRow, ExAutoUpdateCol))
+    NoDraft = RegexNoUpdate.Test(ExamSheet.Cells(InviteRow, ExAutoDraftCol))
 End Sub
