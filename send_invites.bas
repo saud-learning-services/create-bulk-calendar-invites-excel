@@ -21,7 +21,7 @@ Dim ExCalCol As Integer
 Dim ExT1Col As Integer
 Dim ExT2Col As Integer
 Dim ExRoomCol As Integer
-Dim ExTeamTextCol As Integer
+'Dim ExTeamTextCol As Integer
 Dim ExAutoDraftCol As Integer
 Dim ExAutoUpdateCol As Integer
 
@@ -42,7 +42,7 @@ Dim ExCalKey As String
 Dim ExT1Key As String
 Dim ExT2Key As String
 Dim ExRoomKey As String
-Dim ExTeamTextKey As String
+'Dim ExTeamTextKey As String
 Dim ExAutoDraftKey As String
 Dim ExAutoUpdateKey As String
 
@@ -92,7 +92,7 @@ Private Sub InitMod()
     ExT1Key = "TIER 1"
     ExT2Key = "TIER 2"
     ExRoomKey = "SUPPORT ROOM"
-    ExTeamTextKey = "TEAMS MESSAGE TEMPLATE"
+'    ExTeamTextKey = "TEAMS MESSAGE TEMPLATE"
     ExAutoDraftKey = "AUTO DRAFT"
     ExAutoUpdateKey = "AUTO UPDATE"
     InvNameKey = "FULL NAME"
@@ -111,7 +111,7 @@ Private Sub InitMod()
     Call FindCol(ExamSheet, ExT1Key, ExT1Col, ExLastCol)
     Call FindCol(ExamSheet, ExT2Key, ExT2Col, ExLastCol)
     Call FindCol(ExamSheet, ExRoomKey, ExRoomCol, ExLastCol)
-    Call FindCol(ExamSheet, ExTeamTextKey, ExTeamTextCol, ExLastCol)
+'    Call FindCol(ExamSheet, ExTeamTextKey, ExTeamTextCol, ExLastCol)
     Call FindCol(ExamSheet, ExAutoUpdateKey, ExAutoUpdateCol, ExLastCol)
     Call FindCol(ExamSheet, ExAutoDraftKey, ExAutoDraftCol, ExLastCol)
 
@@ -131,7 +131,11 @@ Private Sub InitMod()
         "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", _
         "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z")
 
+    Call UnmergeCol(ExamSheet, ExCourseCol, ExLastRow)
+    Call UnmergeCol(ExamSheet, ExSecCol, ExLastRow)
+    Call UnmergeCol(ExamSheet, ExProfCol, ExLastRow)
     Call UnmergeCol(ExamSheet, ExDateCol, ExLastRow)
+    Call UnmergeCol(ExamSheet, ExTimeCol, ExLastRow)
     Call UnmergeCol(ExamSheet, ExFormCol, ExLastRow)
     Call UnmergeCol(ExamSheet, ExDurCol, ExLastRow)
     Call UnmergeCol(ExamSheet, ExRoomCol, ExLastRow)
@@ -143,7 +147,11 @@ Private Sub EndMod()
     Application.ScreenUpdating = True
     Application.EnableEvents = True
 
+    Call RemergeCol(ExamSheet, ExCourseCol, ExLastRow)
+    Call RemergeCol(ExamSheet, ExSecCol, ExLastRow)
+    Call RemergeCol(ExamSheet, ExProfCol, ExLastRow)
     Call RemergeCol(ExamSheet, ExDateCol, ExLastRow)
+    Call RemergeCol(ExamSheet, ExTimeCol, ExLastRow)
     Call RemergeCol(ExamSheet, ExFormCol, ExLastRow)
     Call RemergeCol(ExamSheet, ExDurCol, ExLastRow)
     Call RemergeCol(ExamSheet, ExRoomCol, ExLastRow)
@@ -158,14 +166,20 @@ Public Sub WriteMultipleInvites()
     Dim FirstExRow As Integer
     Dim LastExRow As Integer
 
-    Call Askers(Sender, SendImmediate, IsDebugging, FirstExRow, LastExRow, ExamSheet, ExCourseCol)
+    Call Askers(Sender, _
+        SendImmediate, _
+        IsDebugging, _
+        FirstExRow, _
+        LastExRow)
 
     Dim InviteRow As Integer
     InviteRow = FirstExRow
     Dim StepThruCourses As Integer
 
     Do While InviteRow <= LastExRow
-        Call WriteSingleInvite(Sender, _
+        Call WriteSingleInvite( _
+            SendImmediate, _
+            Sender, _
             InviteRow, _
             StepThruCourses, _
             IsDebugging, _
@@ -182,12 +196,15 @@ Private Sub Askers( _
     SendImmediate As Boolean, _
     IsDebugging As Boolean, _
     FirstExRow As Integer, _
-    LastExRow As Integer, _
-    ExamSheet As Worksheet, _
-    ExCourseCol As Integer)
+    LastExRow As Integer)
 
     Dim InputStr As String
     Dim RunSelected As Boolean
+
+    Dim SelectedFirst As Integer
+    Dim SelectedLast As Integer
+    SelectedFirst = Application.Selection.Row
+    SelectedLast = SelectedFirst + Application.Selection.Rows.Count - 1
 
     Dim Confirmed As Boolean
     Confirmed = False
@@ -202,6 +219,10 @@ Private Sub Askers( _
                 "'yes' - sending / drafting invites for actual exams" & vbNewLine & _
                 "'no' - testing / debugging only" & vbNewline & vbNewline & _
                 "(Enter answer without quotes)", "Check debugging")
+
+            If InputStr = "" Then
+                End
+            End If
         Loop
         If InputStr = "yes" Then
             IsDebugging = False
@@ -216,6 +237,10 @@ Private Sub Askers( _
                 "'send' - send invites immediately" & vbNewLine & _
                 "'save' - save invite drafts to send later" & vbNewline & vbNewline & _
                 "(Enter answer without quotes)", "Send or Save")
+
+            If InputStr = "" Then
+                End
+            End If
         Loop
         If InputStr = "send" Then
             SendImmediate = True
@@ -231,6 +256,10 @@ Private Sub Askers( _
                 "'selected' - send / draft invites for exams in selected range" & vbNewLine & _
                 "'assign' - assign which rows to send / draft invites" & vbNewline & vbNewline & _
                 "(Enter answer without quotes)", "Selected range or assign new")
+
+            If InputStr = "" Then
+                End
+            End If
         Loop
         If InputStr = "selected" Then
             RunSelected = True
@@ -239,8 +268,8 @@ Private Sub Askers( _
         End If
 
         If RunSelected Then
-            FirstExRow = Application.Selection.Row
-            LastExRow = FirstExRow + Application.Selection.Rows.Count - 1
+            FirstExRow = SelectedFirst
+            LastExRow = SelectedLast
         Else
             InputStr = "0"
             Do Until IsNumeric(InputStr) And CInt(InputStr) > 1
@@ -248,6 +277,9 @@ Private Sub Askers( _
                     "Enter row number of the FIRST EXAM to send / draft invite." & _
                     vbNewline & vbNewline & "Please enter FIRST EXAM's row as an integer:", _
                     "First Exam Row Number")
+                If InputStr = "" Then
+                    End
+                End If
             Loop
             FirstExRow = CInt(InputStr)
 
@@ -257,6 +289,9 @@ Private Sub Askers( _
                     "Enter row number of the LAST EXAM to send / draft invite." & _
                     vbNewline & vbNewline & "Please enter LAST EXAM's row as an integer:", _
                     "Last Exam Row Number")
+                If InputStr = "" Then
+                    End
+                End If
             Loop
             LastExRow = CInt(InputStr)
         End If
@@ -340,13 +375,12 @@ Private Sub FindCol( _
 
     On Error GoTo CannotFind
 
-    FindName:
-        With RefSheet
-            NumCol = .Range(.Cells(AnchorRow, AnchorCol), _
-                .Cells(AnchorRow, LastCol)).Find _
-                (ColName, LookIn:=xlValues, MatchCase:=False).Column
-        End With
-        Exit Sub
+    With RefSheet
+        NumCol = .Range(.Cells(AnchorRow, AnchorCol), _
+            .Cells(AnchorRow, LastCol)).Find _
+            (ColName, LookIn:=xlValues, MatchCase:=False).Column
+    End With
+    Exit Sub
     CannotFind:
         ErrorMsg = "Error when finding column with name of '" & ColName & "'." _
             & vbNewLine & vbNewLine & "Try checking spelling of column names." _
@@ -395,17 +429,12 @@ Private Sub InvNameRoleAtts( _
     InviteeAtts As Object, _
     RoleInd As Integer, _
     HasPrefName As Boolean, _
-    InvNameKey As String, _
     InvIsLead As Boolean, _
     InvIsTriage As Boolean, _
     FNameStr As String, _
     LNameStr As String, _
     PrefNameStr As String, _
-    ExProfKey As String, _
-    ExT1Col As Integer, _
-    ExT2Col As Integer, _
-    SourceCol As Integer, _
-    CapAlphs As Variant)
+    SourceCol As Integer)
 
     With InviteeAtts
         If HasPrefName Then
@@ -437,7 +466,6 @@ End Sub
 
 'This adds recipients by email to the exam meeting
 Private Sub FetchMails( _
-    MailSheet As Worksheet, _
     LastRow As Integer, _
     SourceCol As Integer, _
     SourceVal As String, _
@@ -545,17 +573,12 @@ Private Sub FetchMails( _
                     InviteeAtts, _
                     RoleInd, _
                     HasPrefName, _
-                    InvNameKey, _
                     InvIsLead, _
                     InvIsTriage, _
                     FNameStr, _
                     LNameStr, _
                     PrefNameStr, _
-                    ExProfKey, _
-                    ExT1Col, _
-                    ExT2Col, _
-                    SourceCol, _
-                    CapAlphs)
+                    SourceCol)
 
                 InviteeList.Add _
                     Key:= TestPrefix & MailSheet.Cells(ScanRow, MailCol).Value, _
@@ -574,17 +597,12 @@ Private Sub FetchMails( _
                     InviteeAtts, _
                     RoleInd, _
                     HasPrefName, _
-                    InvNameKey, _
                     InvIsLead, _
                     InvIsTriage, _
                     FNameStr, _
                     LNameStr, _
                     PrefNameStr, _
-                    ExProfKey, _
-                    ExT1Col, _
-                    ExT2Col, _
-                    SourceCol, _
-                    CapAlphs)
+                    SourceCol)
 
                 InviteeList.Add _
                     Key:= TestPrefix & MailSheet.Cells(ScanRow, MailCol).Value, _
@@ -609,16 +627,7 @@ End Sub
 Private Sub InviteAtts( _
     StepThruCourses As Integer, _
     Courses As Object, _
-    ExamSheet As Worksheet, _
     InviteRow As Integer, _
-    ExSpecials As Variant, _
-    ExTimeCol As Integer, _
-    ExDateCol As Integer, _
-    ExDateKey As String, _
-    ExT2MeetKey As String, _
-    ExPreMeetKey As String, _
-    ExTimeKey As String, _
-    ExEndKey As String, _
     Optional PreMeetingMins As Integer = 30, _
     Optional T2MeetingMins As Integer = 30)
 
@@ -672,7 +681,7 @@ Private Sub InviteAtts( _
                         TimeEnd = Left(TimeAllMatches.Item(1), 5)
                     Else
                         TimeEnd = FormatDateTime( _
-                            DateAdd("n", -150, TimeExam), vbShortTime)
+                            DateAdd("n", -180, TimeExam), vbShortTime)
                     End If
 
                     With CourseInfo
@@ -684,15 +693,28 @@ Private Sub InviteAtts( _
                 End If
             Next CourseAtt
 
-            Courses.Add _
-                Key:= .Cells(InviteRow + CourseInInvite - 1, 1).Value, _
-                Item:= CourseInfo
+            If .Cells(InviteRow + CourseInInvite - 1, ExCourseCol).Value _
+                = .Cells(InviteRow + CourseInInvite - 2, ExCourseCol).Value _
+                Or _
+                .Cells(InviteRow + CourseInInvite - 1, ExCourseCol).Value _
+                = .Cells(InviteRow + CourseInInvite, ExCourseCol).Value _
+                Then
+                Courses.Add _
+                    Key:= .Cells(InviteRow + CourseInInvite - 1, ExCourseCol).Value _
+                        & " " & .Cells(InviteRow + CourseInInvite - 1, ExSecCol).Value, _
+                    Item:= CourseInfo
+            Else
+                Courses.Add _
+                    Key:= .Cells(InviteRow + CourseInInvite - 1, ExCourseCol).Value, _
+                    Item:= CourseInfo
+            End If
         End With
     Next CourseInInvite
 End Sub
 
 'Drafts invite for one set of course(s) that share a meeting time & room
 Public Sub WriteSingleInvite( _
+    Optional SendImmediate As Boolean = False, _
     Optional Sender As String = "Sauder LS", _
     Optional InviteRow As Integer = 0, _
     Optional StepThruCourses As Integer, _
@@ -710,37 +732,59 @@ Public Sub WriteSingleInvite( _
 
     'Check if the T1 cell is merged, check for length and assign accordingly to nextrow
     With ExamSheet
-        If .Cells(InviteRow, ExT1Col).MergeCells Then
-            StepThruCourses = .Cells(InviteRow, ExT1Col).MergeArea.Count
+        If .Cells(InviteRow, ExT2Col).MergeCells Then
+            StepThruCourses = .Cells(InviteRow, ExT2Col).MergeArea.Count
         End If
     End With
 
     Dim IsUpdating As Boolean
     Dim HaveSentInv As Boolean
+    Dim HaveSavedInv As Boolean
     Dim NoUpdate As Boolean
     Dim NoDraft As Boolean
+    Dim NewStatus As String
 
     Call CheckIfUpdating( _
         HaveSentInv, _
+        HaveSavedInv, _
         NoDraft, _
         NoUpdate, _
-        ExamSheet, _
-        ExCalCol, _
-        ExAutoUpdateCol, _
         InviteRow)
 
-    If NoDraft Then
+    Dim DatesBack As Integer
+    If IsDebugging Then
+        DatesBack = 548
+    Else
+        DatesBack = 1
+    End If
+
+    Dim InvSendTimeStamp As String
+    InvSendTimeStamp = FormatDateTime(Now, vbShortDate)
+
+
+    If NoDraft _
+        Or DateDiff("d", _
+            InvSendTimeStamp, _
+            ExamSheet.Cells(InviteRow, ExDateCol)) _
+            <= -1*DatesBack _
+        Then
         Exit Sub
-    ElseIf NoUpdate And HaveSentInv Then
+    ElseIf NoUpdate And (HaveSentInv Or HaveSavedInv) Then
         Exit Sub
-    ElseIf Not(NoUpdate) And HaveSentInv Then
+    ElseIf Not(NoUpdate) And (HaveSentInv Or HaveSavedInv) Then
         IsUpdating = True
     Else
         IsUpdating = False
     End If
 
+    If HaveSentInv Or SendImmediate Then
+        NewStatus = "sent"
+    ElseIf Not(SendImmediate) Then
+        NewStatus = "saved"
+    End If
+
     Dim IsOnCall As Boolean
-    Call CheckOnCall(IsOnCall, ExamSheet, ExT2Col, InviteRow)
+    Call CheckOnCall(IsOnCall, InviteRow)
 
     Dim Courses As Object
     Set Courses = CreateObject("Scripting.Dictionary")
@@ -748,17 +792,7 @@ Public Sub WriteSingleInvite( _
     Call InviteAtts( _
         StepThruCourses, _
         Courses, _
-        ExamSheet, _
-        InviteRow, _
-        ExSpecials, _
-        ExTimeCol, _
-        ExDateCol, _
-        ExDateKey, _
-        ExT2MeetKey, _
-        ExPreMeetKey, _
-        ExTimeKey, _
-        ExEndKey _
-        )
+        InviteRow)
     Dim FirstCourse As String
     FirstCourse = Courses.Keys()(0)
     Dim InvSubject As String
@@ -771,14 +805,13 @@ Public Sub WriteSingleInvite( _
     End If
     Dim InvPreMeetTime As String
     Dim MaxEndTime As String
-    MaxEndTime = "00:01"
+    MaxEndTime = FormatDateTime( _
+        Courses(FirstCourse).Item(ExEndKey), _
+        vbShortTime)
 
     InvPreMeetTime = FormatDateTime( _
         Courses(FirstCourse).Item(ExPreMeetKey), _
         vbShortTime)
-
-    Dim InvSendTimeStamp As String
-    InvSendTimeStamp = FormatDateTime(Now, vbShortDate)
 
     Dim cours As Variant
     For Each cours In Courses.Keys
@@ -822,17 +855,11 @@ Public Sub WriteSingleInvite( _
             OtAppDate = FormatDateTime(OtObj.Start, vbShortDate)
             OtAppTime = FormatDateTime(OtObj.Start, vbShortTime)
 
-            Dim datesBack As Integer
-            If IsDebugging Then
-                datesBack = 548
-            Else
-                datesBack = 0
-            End If
 
             Dim TotRecip As Integer
             Dim recip As Integer
 
-            If DateDiff("d", InvSendTimeStamp, OtAppDate) >= -1*datesBack And _
+            If DateDiff("d", InvSendTimeStamp, OtAppDate) >= -1*DatesBack And _
                 DateDiff("d", InvSendTimeStamp, OtAppDate) <= 90 Then
                     If DateDiff("n",OtAppDate & " " & OtAppTime,InvPreMeetTime)<=60 Then
                         If OtAppSubject = SubPrefix & "Tier 2 Block - " & InvSubject Then
@@ -875,7 +902,6 @@ Public Sub WriteSingleInvite( _
     Set T2Invitees = CreateObject("Scripting.Dictionary")
 
     Call FetchMails( _
-        MailSheet, _
         MailLastRow, _
         ExT2Col, _
         SourceVal, _
@@ -889,7 +915,6 @@ Public Sub WriteSingleInvite( _
         Set T1Invitees = CreateObject("Scripting.Dictionary")
 
         Call FetchMails( _
-            MailSheet, _
             MailLastRow, _
             ExT1Col, _
             SourceVal, _
@@ -905,7 +930,6 @@ Public Sub WriteSingleInvite( _
         Next Prof
 
         Call FetchMails( _
-            MailSheet, _
             MailLastRow, _
             ExProfCol, _
             SourceVal, _
@@ -914,16 +938,6 @@ Public Sub WriteSingleInvite( _
         Call WriteHTMLInvBody( _
             MainInvHTML, _
             Courses, _
-            ExPreMeetKey, _
-            ExRoomKey, _
-            ExProfKey, _
-            ExSecKey, _
-            ExTimeKey, _
-            ExEndKey, _
-            ExFormKey, _
-            ExDurKey, _
-            InvRoleKey, _
-            InvNameKey, _
             IsOnCall, _
             FirstCourse, _
             T2Invitees, _
@@ -932,16 +946,6 @@ Public Sub WriteSingleInvite( _
         Call WriteHTMLInvBody( _
             T2InvHTML, _
             Courses, _
-            ExPreMeetKey, _
-            ExRoomKey, _
-            ExProfKey, _
-            ExSecKey, _
-            ExTimeKey, _
-            ExEndKey, _
-            ExFormKey, _
-            ExDurKey, _
-            InvRoleKey, _
-            InvNameKey, _
             IsOnCall, _
             FirstCourse, _
             T2Invitees, _
@@ -951,16 +955,6 @@ Public Sub WriteSingleInvite( _
         Call WriteHTMLInvBody( _
             T2InvHTML, _
             Courses, _
-            ExPreMeetKey, _
-            ExRoomKey, _
-            ExProfKey, _
-            ExSecKey, _
-            ExTimeKey, _
-            ExEndKey, _
-            ExFormKey, _
-            ExDurKey, _
-            InvRoleKey, _
-            InvNameKey, _
             IsOnCall, _
             FirstCourse, _
             T2Invitees, _
@@ -1009,8 +1003,13 @@ Public Sub WriteSingleInvite( _
                 .Recipients.Add (PersonMail)
             Next PersonMail
             .Display
-            .Save
-            .Close(olSave)
+            If HaveSentInv Or SendImmediate Then
+                .Save
+                .Send
+            Else
+                .Save
+                .Close(olSave)
+            End If
         End With
         InvStatus = InvStatus & " T1, "
     End If
@@ -1032,13 +1031,18 @@ Public Sub WriteSingleInvite( _
             .Recipients.Add (PersonMail)
         Next PersonMail
         .Display
-        .Save
-        .Close(olSave)
+        If HaveSentInv Or SendImmediate Then
+            .Save
+            .Send
+        Else
+            .Save
+            .Close(olSave)
+        End If
     End With
     If IsUpdating Then
-        InvStatus = InvStatus & "T2 updated sent, " & InvSendTimeStamp & "; "
+        InvStatus = InvStatus & "T2 updated " & NewStatus & " by "& Sender & InvSendTimeStamp & "; "
     Else
-        InvStatus = InvStatus & "T2 sent by" & Sender & " " & InvSendTimeStamp & "; "
+        InvStatus = InvStatus & "T2 " & NewStatus & " by " & Sender & " " & InvSendTimeStamp & "; "
     End If
     ExamSheet.Cells(InviteRow, ExCalCol).Value = InvStatus
 
@@ -1052,16 +1056,6 @@ End Sub
 Private Sub WriteHTMLInvBody ( _
     InvHTML As String, _
     Courses As Object, _
-    ExPreMeetKey As String, _
-    ExRoomKey As String, _
-    ExProfKey As String, _
-    ExSecKey As String, _
-    ExTimeKey As String, _
-    ExEndKey As String, _
-    ExFormKey As String, _
-    ExDurKey As String, _
-    InvRoleKey As String, _
-    InvNameKey As String, _
     IsOnCall As Boolean, _
     FirstCourse As String, _
     T2Invitees As Object, _
@@ -1176,8 +1170,6 @@ Private Sub WriteHTMLInvBody ( _
 End Sub
 
 Private Sub CheckOnCall(IsOnCall As Boolean, _
-    ExamSheet As Worksheet, _
-    ExT2Col As Integer, _
     InviteRow As Integer)
 
     Dim RegexOnCall As Object
@@ -1189,11 +1181,9 @@ Private Sub CheckOnCall(IsOnCall As Boolean, _
 End Sub
 
 Private Sub CheckIfUpdating(HaveSentInv As Boolean, _
+    HaveSavedInv As Boolean, _
     NoDraft As Boolean, _
     NoUpdate As Boolean, _
-    ExamSheet As Worksheet, _
-    ExCalCol As Integer, _
-    ExAutoUpdateCol As Integer, _
     InviteRow As Integer)
 
     Dim RegexHaveSent As Object
@@ -1201,6 +1191,12 @@ Private Sub CheckIfUpdating(HaveSentInv As Boolean, _
     RegexHaveSent.Pattern = "sent"
     RegexHaveSent.IgnoreCase = True
     HaveSentInv = RegexHaveSent.Test(ExamSheet.Cells(InviteRow, ExCalCol))
+
+    Dim RegexHaveSaved As Object
+    Set RegexHaveSaved = CreateObject("VBScript.RegExp")
+    RegexHaveSaved.Pattern = "saved"
+    RegexHaveSaved.IgnoreCase = True
+    HaveSavedInv = RegexHaveSaved.Test(Examsheet.Cells(InviteRow, ExCalCol))
 
     Dim RegexNoUpdate As Object
     Set RegexNoUpdate = CreateObject("VBScript.RegExp")
