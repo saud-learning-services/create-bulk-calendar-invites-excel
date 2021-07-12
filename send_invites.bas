@@ -933,7 +933,8 @@ Public Sub WriteSingleInvite( _
         MailLastRow, _
         ExT2Col, _
         SourceVal, _
-        T2Invitees)
+        T2Invitees, _
+        TestRunning:=IsDebugging)
 
     Dim T2InvHTML As String
     If Not IsOnCall Then
@@ -946,7 +947,8 @@ Public Sub WriteSingleInvite( _
             MailLastRow, _
             ExT1Col, _
             SourceVal, _
-            T1Invitees)
+            T1Invitees, _
+            TestRunning:=IsDebugging)
 
         Dim ProfInvitees As Object
         Set ProfInvitees = CreateObject("Scripting.Dictionary")
@@ -961,7 +963,8 @@ Public Sub WriteSingleInvite( _
             MailLastRow, _
             ExProfCol, _
             SourceVal, _
-            ProfInvitees)
+            ProfInvitees, _
+            TestRunning:=IsDebugging)
 
         Call WriteHTMLInvBody( _
             MainInvHTML, _
