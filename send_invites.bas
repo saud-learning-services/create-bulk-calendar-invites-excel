@@ -153,7 +153,6 @@ Private Sub EndMod()
     Call RemergeCol(ExamSheet, ExTimeCol, ExLastRow)
     Call RemergeCol(ExamSheet, ExFormCol, ExLastRow)
     Call RemergeCol(ExamSheet, ExDurCol, ExLastRow)
-    Call RemergeCol(ExamSheet, ExRoomCol, ExLastRow)
 
     Application.Calculation = xlCalculationAutomatic
     Application.ScreenUpdating = True
@@ -1334,7 +1333,7 @@ Private Sub SaveOutput()
     Dim SaveDir As String
     SaveDir = ActiveWorkbook.Path & "\output\"
 
-    If DIR(SaveDir) = "" Then
+    If DIR(SaveDir, vbDirectory) = "" Then
         MkDir(SaveDir)
     End If
 
