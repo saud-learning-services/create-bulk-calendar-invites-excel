@@ -1,5 +1,4 @@
 'Attribute VB_Name = "Send_Invite_Module"
-'testyank
 Option Explicit
 
 'Initialize global variables
@@ -21,7 +20,7 @@ Dim ExCalCol As Integer
 Dim ExT1Col As Integer
 Dim ExT2Col As Integer
 Dim ExRoomCol As Integer
-'Dim ExTeamTextCol As Integer
+Dim ExTeamTextCol As Integer
 Dim ExAutoDraftCol As Integer
 Dim ExAutoUpdateCol As Integer
 
@@ -42,7 +41,7 @@ Dim ExCalKey As String
 Dim ExT1Key As String
 Dim ExT2Key As String
 Dim ExRoomKey As String
-'Dim ExTeamTextKey As String
+Dim ExTeamTextKey As String
 Dim ExAutoDraftKey As String
 Dim ExAutoUpdateKey As String
 
@@ -92,7 +91,7 @@ Private Sub InitMod()
     ExT1Key = "TIER 1"
     ExT2Key = "TIER 2"
     ExRoomKey = "SUPPORT ROOM"
-'    ExTeamTextKey = "TEAMS MESSAGE TEMPLATE"
+    ExTeamTextKey = "TEAMS MESSAGE TEMPLATE"
     ExAutoDraftKey = "AUTO DRAFT"
     ExAutoUpdateKey = "AUTO UPDATE"
     InvNameKey = "FULL NAME"
@@ -111,7 +110,7 @@ Private Sub InitMod()
     Call FindCol(ExamSheet, ExT1Key, ExT1Col, ExLastCol)
     Call FindCol(ExamSheet, ExT2Key, ExT2Col, ExLastCol)
     Call FindCol(ExamSheet, ExRoomKey, ExRoomCol, ExLastCol)
-'    Call FindCol(ExamSheet, ExTeamTextKey, ExTeamTextCol, ExLastCol)
+    Call FindCol(ExamSheet, ExTeamTextKey, ExTeamTextCol, ExLastCol)
     Call FindCol(ExamSheet, ExAutoUpdateKey, ExAutoUpdateCol, ExLastCol)
     Call FindCol(ExamSheet, ExAutoDraftKey, ExAutoDraftCol, ExLastCol)
 
@@ -131,6 +130,8 @@ Private Sub InitMod()
         "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", _
         "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z")
 
+    Call SaveOutput
+
     Call UnmergeCol(ExamSheet, ExCourseCol, ExLastRow)
     Call UnmergeCol(ExamSheet, ExSecCol, ExLastRow)
     Call UnmergeCol(ExamSheet, ExProfCol, ExLastRow)
@@ -139,14 +140,12 @@ Private Sub InitMod()
     Call UnmergeCol(ExamSheet, ExFormCol, ExLastRow)
     Call UnmergeCol(ExamSheet, ExDurCol, ExLastRow)
     Call UnmergeCol(ExamSheet, ExRoomCol, ExLastRow)
+
+    Call CheckDates
 End Sub
 
 'To conclude process, restore default spreadsheet settings, remerge cells
 Private Sub EndMod()
-    Application.Calculation = xlCalculationAutomatic
-    Application.ScreenUpdating = True
-    Application.EnableEvents = True
-
     Call RemergeCol(ExamSheet, ExCourseCol, ExLastRow)
     Call RemergeCol(ExamSheet, ExSecCol, ExLastRow)
     Call RemergeCol(ExamSheet, ExProfCol, ExLastRow)
@@ -155,6 +154,10 @@ Private Sub EndMod()
     Call RemergeCol(ExamSheet, ExFormCol, ExLastRow)
     Call RemergeCol(ExamSheet, ExDurCol, ExLastRow)
     Call RemergeCol(ExamSheet, ExRoomCol, ExLastRow)
+
+    Application.Calculation = xlCalculationAutomatic
+    Application.ScreenUpdating = True
+    Application.EnableEvents = True
 End Sub
 
 Public Sub WriteMultipleInvites()
@@ -221,6 +224,7 @@ Private Sub Askers( _
                 "(Enter answer without quotes)", "Check debugging")
 
             If InputStr = "" Then
+                Call EndMod
                 End
             End If
         Loop
@@ -239,6 +243,7 @@ Private Sub Askers( _
                 "(Enter answer without quotes)", "Send or Save")
 
             If InputStr = "" Then
+                Call EndMod
                 End
             End If
         Loop
@@ -258,6 +263,7 @@ Private Sub Askers( _
                 "(Enter answer without quotes)", "Selected range or assign new")
 
             If InputStr = "" Then
+                Call EndMod
                 End
             End If
         Loop
@@ -278,6 +284,7 @@ Private Sub Askers( _
                     vbNewline & vbNewline & "Please enter FIRST EXAM's row as an integer:", _
                     "First Exam Row Number")
                 If InputStr = "" Then
+                    Call EndMod
                     End
                 End If
             Loop
@@ -290,6 +297,7 @@ Private Sub Askers( _
                     vbNewline & vbNewline & "Please enter LAST EXAM's row as an integer:", _
                     "Last Exam Row Number")
                 If InputStr = "" Then
+                    Call EndMod
                     End
                 End If
             Loop
@@ -503,7 +511,11 @@ Private Sub FetchMails( _
             FNameStr = .Cells(ScanRow, FNameCol)
             LNameStr = .Cells(ScanRow, LNameCol)
             FInitStr = Left(FNameStr, 2)
-            LInitStr = Left(LNameStr, 1)
+            If SourceCol = ExProfCol Then
+                LInitStr = Left(LNameStr, 3)
+            Else
+                LInitStr = Left(LNameStr, 1)
+            End If
             HasPrefName = (.Cells(ScanRow, PrefNameCol) <> "")
 
             If HasPrefName Then
@@ -636,7 +648,7 @@ Private Sub InviteAtts( _
 
     Dim RegexTimes As Object
     Set RegexTimes = CreateObject("VBScript.RegExp")
-    RegexTimes.Pattern = "\d\d:\d\d"
+    RegexTimes.Pattern = "\b\d*\d:\d\d"
     RegexTimes.Global = True
     Dim TimeAllMatches
     Dim TimeFound As Integer
@@ -666,7 +678,12 @@ Private Sub InviteAtts( _
                     Set TimeAllMatches = RegexTimes.Execute( _
                         .Cells(InviteRow + CourseInInvite - 1, ExSpecials(CourseAtt)).Value)
 
-                    TimeExam = Left(TimeAllMatches.Item(0), 5)
+                    If TimeAllMatches.Count = 0 Then
+                        TimeExam = FormatDateTime( _
+                            ExamSheet.Cells(InviteRow, ExTimeCol), vbShortTime)
+                    Else
+                        TimeExam = Left(TimeAllMatches.Item(0), 5)
+                    End If
 
                     If CourseInInvite = 1 Then
                         TimePreMeet = FormatDateTime( _
@@ -681,7 +698,7 @@ Private Sub InviteAtts( _
                         TimeEnd = Left(TimeAllMatches.Item(1), 5)
                     Else
                         TimeEnd = FormatDateTime( _
-                            DateAdd("n", -180, TimeExam), vbShortTime)
+                            DateAdd("n", 180, TimeExam), vbShortTime)
                     End If
 
                     With CourseInfo
@@ -761,7 +778,6 @@ Public Sub WriteSingleInvite( _
     Dim InvSendTimeStamp As String
     InvSendTimeStamp = FormatDateTime(Now, vbShortDate)
 
-
     If NoDraft _
         Or DateDiff("d", _
             InvSendTimeStamp, _
@@ -821,7 +837,7 @@ Public Sub WriteSingleInvite( _
             MaxEndTime = _
                 FormatDateTime(Courses(cours).Item(ExEndKey), vbShortTime)
         End If
-        InvSubject = InvSubject & cours & " "
+        InvSubject = InvSubject & cours & " " & Courses(cours).Item(ExProfKey) & " "
         If IsDebugging Then
             Dim coursAtt As Variant
             Debug.Print cours
@@ -831,20 +847,29 @@ Public Sub WriteSingleInvite( _
             Debug.Print "------"
         End If
     Next cours
+    MaxEndTime = FormatDateTime(DateAdd("n", 30, MaxEndTime), vbShortTime)
     InvSubject = InvSubject & "EXAM(S) - " & InvPreMeetTime
 
     'Build an Outlook Invite
     Dim Ot As Outlook.Application
     Set Ot = New Outlook.Application
-    Dim OtNameSpace As Outlook.Namespace
     Dim OtAppointT2 As Outlook.AppointmentItem
     Dim OtAppointMain As Outlook.AppointmentItem
+    Dim OtNameSpace As Outlook.Namespace
+    Dim OtAppSender As Outlook.Recipient
+    Dim OtFolder As Outlook.MAPIFolder
+
+    Set OtNamespace = Ot.GetNameSpace("MAPI")
+    Set OtAppSender = OtNameSpace.CreateRecipient("learning.services@sauder.ubc.ca")
+    If OtAppSender.Resolve Then
+        Set OtFolder = OtNameSpace.GetSharedDefaultFolder(OtAppSender, olFolderCalendar)
+    End If
+
+    Dim InvStatus As String
+    InvStatus = ExamSheet.Cells(InviteRow, ExCalCol).Value
 
     If IsUpdating Then
-        Dim OtFolder As Outlook.MAPIFolder
         Dim OtObj As Object
-        Set OtNamespace = Ot.GetNameSpace("MAPI")
-        Set OtFolder = OtNameSpace.GetDefaultFolder(olFolderCalendar)
 
         Dim OtAppSubject As String
         Dim OtAppDate As String
@@ -886,12 +911,16 @@ Public Sub WriteSingleInvite( _
                     End If
             End If
         Next OtObj
-    Else
+    End If
+
+    If Not(IsUpdating) Or (OtAppointMain Is Nothing) Then
+        IsUpdating = False
+        InvStatus = ""
         If Not IsOnCall Then
-            Set OtAppointMain = Ot.CreateItem(olAppointmentItem)
+            Set OtAppointMain = OtFolder.Items.Add(olAppointmentItem)
             OtAppointMain.MeetingStatus = olMeeting
         End If
-        Set OtAppointT2 = Ot.CreateItem(olAppointmentItem)
+        Set OtAppointT2 = OtFolder.Items.Add(olAppointmentItem)
         OtAppointT2.MeetingStatus = olMeeting
     End If
 
@@ -971,9 +1000,6 @@ Public Sub WriteSingleInvite( _
     End With
     OtAppointT2.GetInspector().WordEditor.Range.FormattedText.Paste
 
-    Dim InvStatus As String
-    InvStatus = ExamSheet.Cells(InviteRow, ExCalCol).Value
-
     Dim PersonMail
 
     If Not IsOnCall Then
@@ -1002,6 +1028,9 @@ Public Sub WriteSingleInvite( _
             For Each PersonMail In T2Invitees.Keys
                 .Recipients.Add (PersonMail)
             Next PersonMail
+            If IsDebugging Then
+                .Recipients.Add("michael.xiong@sauder.ubc.ca")
+            End If
             .Display
             If HaveSentInv Or SendImmediate Then
                 .Save
@@ -1030,6 +1059,9 @@ Public Sub WriteSingleInvite( _
         For Each PersonMail In T2Invitees.Keys
             .Recipients.Add (PersonMail)
         Next PersonMail
+        If IsDebugging Then
+            .Recipients.Add("michael.xiong@sauder.ubc.ca")
+        End If
         .Display
         If HaveSentInv Or SendImmediate Then
             .Save
@@ -1046,6 +1078,9 @@ Public Sub WriteSingleInvite( _
     End If
     ExamSheet.Cells(InviteRow, ExCalCol).Value = InvStatus
 
+    Dim MSTeamsStr As String
+    Call MakeTeamsMsg(MSTeamsStr, InvPreMeetTime, InviteRow, Courses)
+    ExamSheet.Cells(InviteRow, ExTeamTextCol).Value = MSTeamsStr
 
     If OnlyOneInvite Then
         Call EndMod
@@ -1204,4 +1239,106 @@ Private Sub CheckIfUpdating(HaveSentInv As Boolean, _
     RegexNoUpdate.IgnoreCase = True
     NoUpdate = RegexNoUpdate.Test(ExamSheet.Cells(InviteRow, ExAutoUpdateCol))
     NoDraft = RegexNoUpdate.Test(ExamSheet.Cells(InviteRow, ExAutoDraftCol))
+End Sub
+
+Public Sub NukeDebugInvites
+    Dim Ot As Outlook.Application
+    Set Ot = New Outlook.Application
+    Dim OtNameSpace As Outlook.Namespace
+    Dim OtAppSender As Outlook.Recipient
+    Dim OtFolder As Outlook.MAPIFolder
+
+    Set OtNamespace = Ot.GetNameSpace("MAPI")
+    Set OtAppSender = OtNameSpace.CreateRecipient("learning.services@sauder.ubc.ca")
+    If OtAppSender.Resolve Then
+        Set OtFolder = OtNameSpace.GetSharedDefaultFolder(OtAppSender, olFolderCalendar)
+    End If
+
+    Dim SubPrefix As String
+    SubPrefix = "IGNORE TESTING ONLY - "
+
+    Dim OtObj As Object
+
+    Dim OtAppSubject As String
+    Dim OtAppDate As String
+    Dim OtAppTime As String
+
+    Dim HasLeftovers As Boolean
+    HasLeftovers = True
+    Do While HasLeftovers = True
+        For Each OtObj in OtFolder.Items
+            OtAppSubject = OtObj.Subject
+            If InStr(OtAppSubject, SubPrefix) Then
+                Debug.Print OtObj.Subject
+                OtObj.Delete
+            End If
+        Next OtObj
+        Debug.Print "------"
+        HasLeftovers = False
+        For Each OtObj in OtFolder.Items
+            OtAppSubject = OtObj.Subject
+            If InStr(OtAppSubject, SubPrefix) Then
+                HasLeftovers = True
+            End If
+        Next OtObj
+    Loop
+End Sub
+
+Private Sub CheckDates()
+    Dim DateCell As Integer
+
+    For DateCell = 2 To ExLastRow Step 1
+        With ExamSheet
+            If Not(IsDate(.Cells(DateCell, ExDateCol))) Then
+                Call EndMod
+                ErrorMsg = "Date format error at: " _
+                    & .Cells(DateCell, ExDateCol).Address _
+                    & ". Please check to ensure date is written as: " _
+                    & "'yyyy-mm-dd' (no quotes) and try again." _
+                    & vbNewLine & vbNewLine _
+                    & "Check other date cells to ensure correct format as well."
+                Err.Raise ErrorNumMod, Description:= ErrorMsg
+            End If
+        End With
+    Next DateCell
+End Sub
+
+Private Sub MakeTeamsMsg( _
+    MSTeamsStr As String, _
+    InvPreMeetTime As String, _
+    InviteRow As Integer, _
+    Courses As Object)
+
+    MSTeamsStr = "Greetings all! Looking forward to everyone supporting "
+    Dim cours As Variant
+    For Each cours in Courses.Keys
+        MSTeamsStr = MSTeamsStr _
+            & cours & " exam w/ " & Courses(cours).Item(ExProfKey) _
+            & " using " + Courses(cours).Item(ExFormKey) + ", "
+    Next cours
+    MSTeamsStr = MSTeamsStr _
+        & " hope to see <INSERT NAMES HERE> on " & ExamSheet.Cells(InviteRow, ExDateCol) _
+        & " at " & InvPreMeetTime + " for a quick pre-meeting. " _
+        & "Let us know if you have any questions. Thank you everyone!"
+End Sub
+
+Private Sub SaveOutput()
+    Dim SaveTime As String
+    SaveTime = FormatDateTime(Now, vbLongDate) _
+        & FormatDateTime(Now, vbShortTime)
+    SaveTime = Replace(SaveTime, "/", "")
+    SaveTime = Replace(SaveTime, " ", "_")
+    SaveTime = Replace(SaveTime, ":", "")
+    SaveTime = Replace(SaveTime, ",", "")
+    SaveTime = Replace(SaveTime, ".", "")
+    Dim SaveDir As String
+    SaveDir = ActiveWorkbook.Path & "\output\"
+
+    If DIR(SaveDir) = "" Then
+        MkDir(SaveDir)
+    End If
+
+    Dim SaveName As String
+    SaveName = SaveDir & "output_" & SaveTime
+    WB.SaveAs FileName:=SaveName, FileFormat:=52
 End Sub
