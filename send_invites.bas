@@ -1324,7 +1324,7 @@ End Sub
 Private Sub SaveOutput()
     Dim SaveTime As String
     SaveTime = FormatDateTime(Now, vbLongDate) _
-        & FormatDateTime(Now, vbShortTime)
+        & "_" & FormatDateTime(Now, vbShortTime)
     SaveTime = Replace(SaveTime, "/", "")
     SaveTime = Replace(SaveTime, " ", "_")
     SaveTime = Replace(SaveTime, ":", "")
