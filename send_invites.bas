@@ -153,6 +153,7 @@ Private Sub EndMod()
     Call RemergeCol(ExamSheet, ExTimeCol, ExLastRow)
     Call RemergeCol(ExamSheet, ExFormCol, ExLastRow)
     Call RemergeCol(ExamSheet, ExDurCol, ExLastRow)
+    Call RemergeCol(ExamSheet, ExRoomCol, ExLastRow)
 
     Application.Calculation = xlCalculationAutomatic
     Application.ScreenUpdating = True
