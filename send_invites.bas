@@ -848,7 +848,7 @@ Public Sub WriteSingleInvite( _
         End If
     Next cours
     MaxEndTime = FormatDateTime(DateAdd("n", 30, MaxEndTime), vbShortTime)
-    InvSubject = InvSubject & "EXAM(S) - " & InvPreMeetTime
+    InvSubject = InvSubject & "EXAM(S)"
 
     'Build an Outlook Invite
     Dim Ot As Outlook.Application
@@ -896,24 +896,25 @@ Public Sub WriteSingleInvite( _
                                 Next recip
                                 .Body = ""
                             End With
-                        ElseIf Not(IsOnCall) _
-                            And OtAppSubject = _
+                        ElseIf Not(IsOnCall) Then
+                            If OtAppSubject = _
                             SubPrefix & "Pre-exam Meeting - " & InvSubject Then
-                            Set OtAppointMain = OtObj
-                            With OtAppointMain
-                                TotRecip = .Recipients.Count - 1
-                                For recip = 1 to TotRecip
-                                    .Recipients.Remove(2)
-                                Next recip
-                                .Body = ""
-                            End With
+                                Set OtAppointMain = OtObj
+                                With OtAppointMain
+                                    TotRecip = .Recipients.Count - 1
+                                    For recip = 1 to TotRecip
+                                        .Recipients.Remove(2)
+                                    Next recip
+                                    .Body = ""
+                                End With
+                            End If
                         End If
                     End If
             End If
         Next OtObj
     End If
 
-    If Not(IsUpdating) Or (OtAppointMain Is Nothing) Then
+    If Not(IsUpdating) Or (OtAppointT2 Is Nothing) Then
         IsUpdating = False
         InvStatus = ""
         If Not IsOnCall Then
