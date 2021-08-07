@@ -1,3 +1,5 @@
 test
 output
 *.swp
+dev
+dev/*
