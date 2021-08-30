@@ -1,5 +1,8 @@
 test
 output
+output/*
 *.swp
 dev
 dev/*
+log
+log/*
