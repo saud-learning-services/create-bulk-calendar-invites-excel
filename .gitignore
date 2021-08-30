@@ -6,3 +6,5 @@ dev
 dev/*
 log
 log/*
+logs
+logs/*

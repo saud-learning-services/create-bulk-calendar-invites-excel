@@ -38,7 +38,7 @@ Private Sub Class_Initialize()
     m_errNum = 42001
     m_logToConsole = True
     m_logToFile = True
-    m_logToSheet = True
+    m_logToSheet = False
     m_logFileClosed = True
 End Sub
 
@@ -51,7 +51,7 @@ Public Sub StartLogging( _
     Optional logFileExt As String = ".txt", _
     Optional LogToConsole As Boolean = True, _
     Optional LogToFile As Boolean = True, _
-    Optional LogToSheet As Boolean = True, _
+    Optional LogToSheet As Boolean = False, _
     Optional LogLevel As Integer = m_logLevelDefault)
     
     'If Not Exists
@@ -63,7 +63,7 @@ Public Sub StartLogging( _
     m_logToSheet = LogToSheet
     m_logLine = 1
     'Don't log to sheet if there're too many sheets i.e. >= 5
-    If ThisWorkbook.Worksheets.Count >= 6 Then
+    If ThisWorkbook.Worksheets.Count >= 3 Then
         m_logToSheet = False
     End If
     If m_logToFile Then

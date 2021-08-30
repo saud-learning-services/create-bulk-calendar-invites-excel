@@ -13,12 +13,15 @@ Option Explicit
 Private m_senderName As String
 Private m_sendImmediate As Boolean
 Private m_isDebugging As Boolean
+Private m_logAll As Boolean
+Private m_allowUpdates As Boolean
 Private m_firstSendRow As Integer
 Private m_lastSendRow As Integer
 Private m_errMsg As String
 Private m_errNum As Long
 
 Private m_logger As clsLogger
+Private m_exSheet As clsExamSheet
 
 'Event - Initialize
 Private Sub Class_Initialize()
@@ -30,11 +33,64 @@ Private Sub Class_Initialize()
     m_errNum = 42002
     m_errMsg = "An error occurred while using property, method or function in" _
         & " class module 'clsSettings'"
+    m_logAll = False
+    m_allowUpdates = False
 End Sub
 
 Public Sub ConstructSettings( _
-    ExamSheet As clsExamSheet, Logger As clsLogger)
-    Askers ExamSheet, Logger
+    ExamSheet As clsExamSheet, Logger As clsLogger, _
+    Optional quickSettings As String = "default")
+    Set m_exSheet = ExamSheet
+    Set m_logger = Logger
+    Dim SettingType As String: SettingType = quickSettings
+    Select Case quickSettings
+        Case "default"
+            m_senderName = "default"
+            m_isDebugging = False
+            m_sendImmediate = False
+            m_firstSendRow = Application.Selection.row
+            m_lastSendRow = m_firstSendRow + Application.Selection.Rows.Count - 1
+            m_logAll = False
+            m_allowUpdates = False
+        Case "draftOrUpdate"
+            m_senderName = "default"
+            m_isDebugging = False
+            m_sendImmediate = False
+            m_firstSendRow = Application.Selection.row
+            m_lastSendRow = m_firstSendRow + Application.Selection.Rows.Count - 1
+            m_logAll = False
+            m_allowUpdates = True
+        Case ""
+            SettingType = "custom"
+            Askers m_exSheet, Logger
+        Case "_quickTest"
+            m_senderName = "_quickTest"
+            m_isDebugging = True
+            m_sendImmediate = False
+            m_firstSendRow = Application.Selection.row
+            m_lastSendRow = m_firstSendRow + Application.Selection.Rows.Count - 1
+            m_logAll = False
+            m_allowUpdates = False
+        Case "_detailDebug"
+            m_senderName = "_detailDebug"
+            m_isDebugging = True
+            m_sendImmediate = False
+            m_firstSendRow = Application.Selection.row
+            m_lastSendRow = m_firstSendRow + Application.Selection.Rows.Count - 1
+            m_logAll = True
+            m_allowUpdates = False
+    End Select
+    m_logger.LogInfo "Using setting type: " & SettingType
+    m_logger.LogInfo "Sender Name: " & m_senderName, indt:=1
+    m_logger.LogInfo "Send immediately: " & m_sendImmediate, indt:=1
+    m_logger.LogInfo "Debugging: " & m_isDebugging, indt:=1
+    m_logger.LogInfo "First row to send / draft invite: " & _
+        m_exSheet.CourseInfo(m_firstSendRow), indt:=1
+    m_logger.LogInfo "Last row to send / draft invite: " & _
+        m_exSheet.CourseInfo(m_lastSendRow), indt:=1
+    m_logger.LogInfo "Log all messages (incl debug): " & m_logAll, indt:=1
+    m_logger.LogInfo "Allowing updates: " & m_allowUpdates, indt:=1
+    m_logger.LogInfo "Proceeding with above settings"
 End Sub
 
 
@@ -63,9 +119,17 @@ Property Get LastSendRow() As Integer
     LastSendRow = m_lastSendRow
 End Property
 
+Property Get LogAll() As Boolean
+    LogAll = m_logAll
+End Property
+
+Property Get AllowUpdates() As Boolean
+    AllowUpdates = m_allowUpdates
+End Property
+
 'Method - Askers - asks for settings
 'IDEA - maybe pass the column slice of courses so users can preview which courses are affected
-Public Sub Askers(ExamSheet As clsExamSheet, Logger As clsLogger)
+Public Sub Askers(m_exSheet As clsExamSheet, Logger As clsLogger)
     Set m_logger = Logger
     Dim InputStr As String: InputStr = ""
     Dim Asker As String: Asker = ""
@@ -75,9 +139,6 @@ Public Sub Askers(ExamSheet As clsExamSheet, Logger As clsLogger)
         m_logger.LogInfo "Start asking for settings"
         Asker = "Please enter your name (for record keeping):"
         InputStr = InputAsker(Asker, "Enter Name")
-        If InputStr = "_qds" Then
-            GoTo QuickDebugSettings
-        End If
         m_senderName = InputStr
 
         InputStr = ""
@@ -146,15 +207,48 @@ Public Sub Askers(ExamSheet As clsExamSheet, Logger As clsLogger)
             m_lastSendRow = CInt(InputStr)
         End If
         
+        InputStr = ""
+        Do While Not (InputOneOf(InputStr, "yes", "no"))
+            Asker = "Log everything in log file (including debug messages)?" & _
+                vbNewLine & vbNewLine & _
+                "'yes' - log absolutely everything (LONG FILE)" & vbNewLine & _
+                "'no' - log more important info only" & vbNewLine & _
+                "(Enter answer exactly without quotes)"
+            InputStr = InputAsker(Asker, "Log everything")
+        Loop
+        If InputStr = "yes" Then
+            m_logAll = True
+        Else
+            m_logAll = False
+        End If
+        
+        InputStr = ""
+        Do While Not (InputOneOf(InputStr, "yes", "no"))
+            Asker = "Update previous invites?" & vbNewLine & vbNewLine & _
+                "'yes' - will attempt to fetch and update previous invites" & vbNewLine & _
+                "'no' - only draft new invites" & vbNewLine & _
+                "(Enter answer exactly without quotes)"
+            InputStr = InputAsker(Asker, "Update invites")
+        Loop
+        If InputStr = "yes" Then
+            m_allowUpdates = True
+        Else
+            m_allowUpdates = False
+        End If
+        
         Asker = _
             "Proceed with following settings?" & vbNewLine & vbNewLine & _
             "Sender Name: " & m_senderName & vbNewLine & _
             "Send invites immediately: " & m_sendImmediate & vbNewLine & _
             "Debugging: " & m_isDebugging & vbNewLine & _
             "First row to send / draft invite: " & _
-                ExamSheet.CourseInfo(m_firstSendRow) & vbNewLine & _
+                m_exSheet.CourseInfo(m_firstSendRow) & vbNewLine & _
             "Last row to send / draft invite: " & _
-                ExamSheet.CourseInfo(m_lastSendRow) & vbNewLine & _
+                m_exSheet.CourseInfo(m_lastSendRow) & vbNewLine & _
+            "Logging everything (even debug messages): " & _
+                m_logAll & vbNewLine & _
+            "Allowing updates to previous invites: " & _
+                m_allowUpdates & vbNewLine & _
             vbNewLine & "Enter:" & vbNewLine & _
             "'yes'  - to proceed with above settings" & vbNewLine & _
             "'no' - to restart" & vbNewLine & _
@@ -164,14 +258,6 @@ Public Sub Askers(ExamSheet As clsExamSheet, Logger As clsLogger)
         If InputStr = "yes" Then
             Confirmed = True
             m_logger.LogInfo "Settings received and confirmed:"
-            m_logger.LogInfo "Sender Name: " & m_senderName, indt:=1
-            m_logger.LogInfo "Send immediately: " & m_sendImmediate, indt:=1
-            m_logger.LogInfo "Debugging: " & m_isDebugging, indt:=1
-            m_logger.LogInfo "First row to send / draft invite: " & _
-                ExamSheet.CourseInfo(m_firstSendRow), indt:=1
-            m_logger.LogInfo "Last row to send / draft invite: " & _
-                ExamSheet.CourseInfo(m_lastSendRow), indt:=1
-            m_logger.LogInfo "Proceeding with above settings"
         ElseIf InputStr = "no" Then
             Confirmed = False
             m_logger.LogDebug "Settings rejected, trying again"
@@ -181,21 +267,6 @@ Public Sub Askers(ExamSheet As clsExamSheet, Logger As clsLogger)
         End If
     Loop
     Exit Sub
-QuickDebugSettings:
-    m_senderName = "_qds"
-    m_isDebugging = True
-    m_sendImmediate = False
-    m_firstSendRow = Application.Selection.row
-    m_lastSendRow = m_firstSendRow + Application.Selection.Rows.Count - 1
-    m_logger.LogInfo "Quick Debug Settings used:"
-    m_logger.LogInfo "Sender Name: " & m_senderName, indt:=1
-    m_logger.LogInfo "Send immediately: " & m_sendImmediate, indt:=1
-    m_logger.LogInfo "Debugging: " & m_isDebugging, indt:=1
-    m_logger.LogInfo "First row to send / draft invite: " & _
-        ExamSheet.CourseInfo(m_firstSendRow), indt:=1
-    m_logger.LogInfo "Last row to send / draft invite: " & _
-        ExamSheet.CourseInfo(m_lastSendRow), indt:=1
-    m_logger.LogInfo "Proceeding with above settings"
 End Sub
 
 'Tests if input is one of two valid inputs

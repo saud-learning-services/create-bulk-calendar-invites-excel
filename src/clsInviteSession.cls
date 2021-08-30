@@ -116,6 +116,12 @@ Public Sub ConstructProperties( _
     Else
         m_invDatesBack = 1
     End If
+    If Not (DateDiff("d", m_invDraftTime, m_invDate) >= -1 * m_invDatesBack) _
+            Or Not (DateDiff("d", m_invDraftTime, m_invDate) <= 90) Then
+        m_skip = True
+        m_logger.LogInfo "Skipping this invite as date out of range"
+        Exit Sub
+    End If
     m_invLoc = m_exSheet.RoomInfo(m_fromRow)
     m_logger.LogDebug "Raw invite location from exam sheet '" & m_invLoc & "'"
     m_invTitle = MakeInviteTitle()
@@ -863,19 +869,13 @@ Public Function GetInviteBody(Optional ForTier2 As Boolean = True) As String
 End Function
 
 Public Function CheckIfUpdating() As Boolean
-    m_logger.LogDebug "Check if course allows auto-updating in the exam sheet"
-    Dim ReNo As New RegExp
-    ReNo.Pattern = "no"
-    ReNo.IgnoreCase = True
-    If ReNo.Test(m_exSheet.AutoUpdateInfo(m_fromRow)) Then
+    m_logger.LogDebug "Check if updating a previous invite"
+    If CheckPrevCalInv = "" Then
         CheckIfUpdating = False
-        m_logger.LogDebug "Course does not allow auto-updating as per the exam sheet"
-    ElseIf CheckPrevCalInv = "" Then
-        CheckIfUpdating = False
-        m_logger.LogDebug "Course does not allow auto-updating as per the exam sheet"
+        m_logger.LogDebug "Not updating a previous invite"
     Else
         CheckIfUpdating = True
-        m_logger.LogDebug "Course allows auto-updating as per the exam sheet"
+        m_logger.LogDebug "Updating a previous invite"
     End If
 End Function
 

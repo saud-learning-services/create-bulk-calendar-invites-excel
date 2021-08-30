@@ -28,7 +28,6 @@ Private m_exRoomCol As Integer
 Private m_exTeamTextCol As Integer
 Private m_exPplInvitedCol As Integer
 Private m_exAutoDraftCol As Integer
-Private m_exAutoUpdateCol As Integer
 Private m_exLinkCol As Integer
 Private m_exTypeCol As Integer
 Private m_errMsg As String
@@ -86,7 +85,6 @@ Public Sub ConstructExamSheet(ExamDataWS As Worksheet, Logger As clsLogger)
     m_exRoomCol = HeaderNum("SUPPORT ROOM")
     m_exTeamTextCol = HeaderNum("TEAMS MESSAGE TEMPLATE")
     m_exAutoDraftCol = HeaderNum("AUTO DRAFT")
-    m_exAutoUpdateCol = HeaderNum("AUTO UPDATE")
     m_exLinkCol = HeaderNum("EXAM LINK")
     m_exTypeCol = HeaderNum("MIDTERM / FINAL / SD?")
     m_logger.LogInfo "Exam Sheet properties initialized"
@@ -143,7 +141,7 @@ Public Function HeaderNum(ColName As String, Optional RecordCol As Boolean = Tru
 CannotFind:
     m_errMsg = "Error when finding column with name of '" & ColName & "'." _
         & "Try checking spelling of column names."
-    m_logger.LogFatal m_errMsg, Err
+    m_logger.LogFatal m_errMsg, Err, raiseFatal:=True
 End Function
 
 Property Get CourseInfo(ByVal RowNum As Integer) As String
@@ -212,10 +210,6 @@ End Property
 
 Property Get AutoDraftInfo(ByVal RowNum As Integer) As String
     AutoDraftInfo = GetVal(RowNum, m_exAutoDraftCol)
-End Property
-
-Property Get AutoUpdateInfo(ByVal RowNum As Integer) As String
-    AutoUpdateInfo = GetVal(RowNum, m_exAutoUpdateCol)
 End Property
 
 Property Get ExamLinkInfo(ByVal RowNum As Integer) As String

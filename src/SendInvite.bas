@@ -1,8 +1,28 @@
 Attribute VB_Name = "SendInvite"
 Option Explicit
 
-Public Sub Main()
-    'SaveAsOutputFile
+Public Sub WriteDefault()
+    WriteInvites "default"
+End Sub
+
+Public Sub DraftOrUpdate()
+    WriteInvites "draftOrUpdate"
+End Sub
+
+Public Sub WriteCustom()
+    WriteInvites ""
+End Sub
+
+Public Sub QuickTest()
+    WriteInvites "_quickTest"
+End Sub
+
+Public Sub DetailDebug()
+    WriteInvites "_detailDebug"
+End Sub
+
+Public Sub WriteInvites(Optional SettingType As String = "default")
+    SaveAsOutputFile
     Dim Logger As New clsLogger
     Logger.StartLogging LogLevel:=1, LogToFile:=True, LogToSheet:=True
     Dim Exams As New clsExamSheet
@@ -11,11 +31,14 @@ Public Sub Main()
         ExamDataWS:=ThisWorkbook.Sheets("Exam Sheet"), Logger:=Logger
     Dim Settings As New clsSettings
     Settings.ConstructSettings _
-        ExamSheet:=Exams, Logger:=Logger
+        ExamSheet:=Exams, Logger:=Logger, quickSettings:=SettingType
     RuntimeOptimize
+    If Settings.LogAll Then
+        Logger.LogLevel = 0
+    End If
     Exams.UnmergeAll "COURSE", "SECTIONS", "MIDTERM / FINAL / SD?", "INSTRUCTOR", _
         "DATE", "TIME", "FORMAT", "DURATION", "# STUDENTS", "CALENDAR INVITE", _
-        "SUPPORT ROOM", "AUTO UPDATE", "AUTO DRAFT", "TEAMS MESSAGE TEMPLATE", "EXAM LINK"
+        "SUPPORT ROOM", "AUTO DRAFT", "TEAMS MESSAGE TEMPLATE", "EXAM LINK"
     Dim Mails As New clsMailSheet
     Mails.ConstructMailSheet _
         MailDataWS:=ThisWorkbook.Sheets("Mail List"), _
@@ -35,11 +58,12 @@ Public Sub Main()
                 RowStep = 1
             End If
         End With
-        Invite.ConstructProperties Logger, Exams, Mails, Settings, RowInd, RowStep, True
+        Invite.ConstructProperties Logger, Exams, Mails, Settings, RowInd, RowStep, Settings.AllowUpdates
         If Not (Invite.Skip) Then
             Invite.WriteAppointments
+            Invite.WriteTeamsMsgTempate
         End If
-        Invite.WriteTeamsMsgTempate
+
         GoTo NextExam
 PrintErrExam:
         Exams.CalStatusInfo(RowInd) = Now() & " - FAILED"
@@ -179,4 +203,3 @@ Public Sub ExportModules()
         End If
     Next xlProjComp
 End Sub
-
