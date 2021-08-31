@@ -18,6 +18,8 @@ Spreadsheet in this repo includes VBA code that automates much of these
 procedures.
 
 ## How to Use
+1. Check: https://ubc.instructure.com/courses/6040/pages/how-to-use-the-send-calendar-invite-spreadsheet 
+    for user's manual complete with images.
 1. Ensure Outlook is open
 1. Download the Excel File in this repo "send_exam_invites.xlsm" 
 (or fetch/pull repo through GitHub)
